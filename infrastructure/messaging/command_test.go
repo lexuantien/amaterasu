@@ -31,27 +31,10 @@ func TestCreateCommandHandler(t *testing.T) {
 	cancelOrder := CreateCommand(CancelOrder{OrderId: "z169"})
 	// create command handler
 	orderCommandHander := OrderCommandHander{}
-	orderCommandHander.Add(placeOrder, confirmOrder, cancelOrder)
-}
 
-func (och OrderCommandHander) Add(commands ...Command) error {
-	for _, command := range commands {
-		switch command.Type {
-		case "messaging.PlaceOrder": // command handle here
-			{
-
-			}
-		case "messaging.ConfirmOrder": // command handle here
-			{
-
-			}
-		case "messaging.CancelOrder": // command handle here
-			{
-
-			}
-		}
-	}
-	return nil
+	orderCommandHander.Handle(cancelOrder)
+	orderCommandHander.Handle(confirmOrder)
+	orderCommandHander.Handle(placeOrder)
 }
 
 func (och OrderCommandHander) Handle(command Command) {
