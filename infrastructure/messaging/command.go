@@ -6,22 +6,38 @@ import (
 	"time"
 )
 
+type ICommand interface {
+	Command() interface{}
+	CommandType() string
+}
+
 // Command represents an actor intention to alter the state of the system
-type Command struct {
+type Envelop struct {
 	Id            uuid.UUID // Identify
 	CorrelationId uuid.UUID
-	Type          string
 	Body          interface{} // Wrap the command
 	Delay         *time.Time
 	Time2Live     *time.Time
 }
 
-func CreateCommand(body interface{}) Command {
-	t := reflect.TypeOf(body)
-	return Command{
+func CreateCommand(command interface{}) *Envelop {
+	return &Envelop{
 		Id:            uuid.New(),
 		CorrelationId: uuid.New(),
-		Type:          t.String(),
-		Body:          body,
+		Body:          command,
 	}
+}
+
+func (e *Envelop) Command() interface{} {
+	return e.Body
+}
+
+func (e *Envelop) CommandType() string {
+	return reflect.TypeOf(e.Body).Elem().Name()
+}
+
+//
+
+type ICommandHandler interface {
+	Handle(ICommand) error
 }

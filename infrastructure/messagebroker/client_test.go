@@ -1,4 +1,4 @@
-package msgqueue
+package messagebroker
 
 import (
 	"testing"
@@ -8,6 +8,6 @@ import (
 
 func TestClient(t *testing.T) {
 	w := &kafka.Writer{}
-	c := &Client{}
+	c := &TopicClient{}
 	c.SetWriter(w)
 }

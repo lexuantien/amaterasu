@@ -7,8 +7,8 @@ import (
 )
 
 type ICommandBus interface {
-	Send(Command)
-	Sends(...Command)
+	Send(Envelop)
+	Sends(...Envelop)
 }
 
 type CommandBus struct {
@@ -16,19 +16,19 @@ type CommandBus struct {
 	serializer serialization.ISerializer
 }
 
-func (bus CommandBus) Send(ctx context.Context, command Command) {
+func (bus CommandBus) Send(ctx context.Context, command Envelop) {
 	message := bus.buildMessage(command)
 	//?? handle command.Delay fail
 	bus.sender.Send(ctx, message, command.Time2Live)
 }
 
-func (bus CommandBus) Sends(ctx context.Context, commands ...Command) {
+func (bus CommandBus) Sends(ctx context.Context, commands ...Envelop) {
 	for _, command := range commands {
 		bus.Send(ctx, command)
 	}
 }
 
-func (bus CommandBus) buildMessage(command Command) []byte {
+func (bus CommandBus) buildMessage(command Envelop) []byte {
 	message, _ := bus.serializer.Serialize(command.Body)
 
 	if command.Id == uuid.Nil { // create new command id

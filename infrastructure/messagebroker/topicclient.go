@@ -1,4 +1,4 @@
-package msgqueue
+package messagebroker
 
 import (
 	"context"
@@ -8,16 +8,22 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-type Client struct {
+// kc.Writer = kafka.NewWriter(kafka.WriterConfig{
+// 	Brokers:  brokers,
+// 	Balancer: &kafka.Hash{},
+// 	Dialer:   dialer,
+// })
+
+type TopicClient struct {
 	topic  string
 	writer interface{}
 }
 
-func (c *Client) SetTopic(topic string) {
+func (c *TopicClient) SetTopic(topic string) {
 	c.topic = topic
 }
 
-func (c *Client) SetWriter(writer interface{}) {
+func (c *TopicClient) SetWriter(writer interface{}) {
 	t := reflect.TypeOf(writer)
 	switch t.String() {
 	case "*kafka.Writer":
@@ -25,7 +31,7 @@ func (c *Client) SetWriter(writer interface{}) {
 	}
 }
 
-func (c *Client) Send(ctx context.Context, message []byte, time2live *time.Time) (bool, error) {
+func (c *TopicClient) Send(ctx context.Context, message []byte, time2live *time.Time) (bool, error) {
 	var err error
 	switch reflect.TypeOf(c.writer).String() {
 	case "*kafka.Writer":

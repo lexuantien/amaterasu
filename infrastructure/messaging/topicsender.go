@@ -2,7 +2,7 @@ package messaging
 
 import (
 	"context"
-	"leech-service/infrastructure/msgqueue"
+	"leech-service/infrastructure/messagebroker"
 	"time"
 )
 
@@ -11,10 +11,11 @@ type IMessageSender interface {
 }
 
 type TopicSender struct {
-	client msgqueue.Client
+	client messagebroker.TopicClient
 }
 
-func Create(c msgqueue.Client) TopicSender {
+// :Create
+func New_TopicSender(c messagebroker.TopicClient) TopicSender {
 	return TopicSender{
 		client: c,
 	}
