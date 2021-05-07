@@ -19,6 +19,7 @@ type CommandProcessor struct {
 	reciever   messaging.IMessageReceiver
 	serializer serialization.ISerializer
 	started    bool
+	cancelFunc context.CancelFunc
 	dispatcher *CommandDispatcher
 }
 
@@ -42,18 +43,22 @@ func (cp *CommandProcessor) processMessage(command messaging.ICommand) error {
 func (cp *CommandProcessor) Start() {
 	// lock
 	cp.lock.Lock()
-	cp.reciever.Start(cp.onMessageReceived)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	cp.cancelFunc = cancelFunc
+	cp.reciever.Start(ctx, cp.onMessageReceived)
 	cp.started = true
 	cp.lock.Unlock()
 }
 
-func (mp *CommandProcessor) Stop() {
-
+func (cp *CommandProcessor) Stop() {
+	cp.lock.Lock()
+	cp.reciever.Stop(cp.cancelFunc)
+	cp.started = false
+	cp.lock.Unlock()
 }
 
 // recieve message from message queue
-func (cp *CommandProcessor) onMessageReceived(message kafka.Message) {
-
+func (cp *CommandProcessor) onMessageReceived(ctx context.Context, message kafka.Message) {
 	payload, err := cp.serializer.Deserialize(message.Value)
 	if err != nil {
 		// add to dead letter
@@ -64,7 +69,7 @@ func (cp *CommandProcessor) onMessageReceived(message kafka.Message) {
 	cp.processMessage(payload.(messaging.ICommand))
 
 	// commit msg
-	err = cp.reciever.CommitMessage(context.Background(), message)
+	err = cp.reciever.Complete(ctx, message)
 	if err != nil {
 		// add to dead letter
 		return

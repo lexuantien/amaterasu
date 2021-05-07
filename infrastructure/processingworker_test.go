@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"context"
 	"leech-service/infrastructure/messagebroker"
 	"leech-service/infrastructure/messaging"
 	"leech-service/infrastructure/messaging/handling"
@@ -37,6 +38,31 @@ type ConfirmOrder struct {
 
 type CancelOrder struct {
 	OrderId string
+}
+
+func TestSendCommand(t *testing.T) {
+	client := messagebroker.New_TopicClient(messagebroker.Scram{
+		Username: "ni61pj1b",
+		Password: "mWl_TWtiOPUKF4hRXVXPfULsKSoMzT0l",
+		Al256:    true,
+	}, []string{
+		"glider-01.srvs.cloudkafka.com:9094",
+		"glider-02.srvs.cloudkafka.com:9094",
+		"glider-03.srvs.cloudkafka.com:9094",
+	}, "ni61pj1b-topic-A")
+
+	sender := messaging.New_TopicSender(*client)
+	serializer := serialization.New_JsonSerializer()
+
+	// create bus
+	bus := messaging.New_CommandBus(sender, serializer)
+
+	// send to kafka
+	bus.Send(context.Background(), messaging.CreateCommand(PlaceOrder{
+		ProductId:   "z106",
+		Quantity:    5,
+		Description: "Bàn phải xuất xứ từ Nhật Bản",
+	}))
 }
 
 func TestProcessCommand(t *testing.T) {

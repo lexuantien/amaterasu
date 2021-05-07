@@ -20,8 +20,8 @@ type Envelop struct {
 	Time2Live     *time.Time
 }
 
-func CreateCommand(command interface{}) *Envelop {
-	return &Envelop{
+func CreateCommand(command interface{}) Envelop {
+	return Envelop{
 		Id:            uuid.New(),
 		CorrelationId: uuid.New(),
 		Body:          command,

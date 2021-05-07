@@ -1,6 +1,8 @@
 package serialization
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type JsonSerializer struct{}
 

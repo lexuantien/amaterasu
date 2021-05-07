@@ -16,6 +16,13 @@ type CommandBus struct {
 	serializer serialization.ISerializer
 }
 
+func New_CommandBus(sen IMessageSender, ser serialization.ISerializer) *CommandBus {
+	return &CommandBus{
+		sen,
+		ser,
+	}
+}
+
 func (bus CommandBus) Send(ctx context.Context, command Envelop) {
 	message := bus.buildMessage(command)
 	//?? handle command.Delay fail

@@ -2,53 +2,63 @@ package messagebroker
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/sasl/scram"
 )
-
-// kc.Writer = kafka.NewWriter(kafka.WriterConfig{
-// 	Brokers:  brokers,
-// 	Balancer: &kafka.Hash{},
-// 	Dialer:   dialer,
-// })
 
 type TopicClient struct {
 	topic  string
-	writer interface{}
+	writer *kafka.Writer
+}
+
+func New_TopicClient(scr Scram, brokers []string, topic string) *TopicClient {
+	client := &TopicClient{}
+	client.topic = topic
+
+	var al scram.Algorithm = scram.SHA512
+	if scr.Al256 {
+		al = scram.SHA256
+	}
+	mechanism, err := scram.Mechanism(al, scr.Username, scr.Password)
+	if err != nil {
+		panic(err)
+	}
+
+	dialer := &kafka.Dialer{
+		Timeout:       10 * time.Second,
+		DualStack:     true,
+		SASLMechanism: mechanism,
+	}
+
+	client.writer = kafka.NewWriter(kafka.WriterConfig{
+		Brokers:      brokers,
+		Balancer:     &kafka.Hash{},
+		Dialer:       dialer,
+		RequiredAcks: int(kafka.RequireOne),
+	})
+
+	return client
 }
 
 func (c *TopicClient) SetTopic(topic string) {
 	c.topic = topic
 }
 
-func (c *TopicClient) SetWriter(writer interface{}) {
-	t := reflect.TypeOf(writer)
-	switch t.String() {
-	case "*kafka.Writer":
-		c.writer = writer.(*kafka.Writer)
-	}
-}
-
 func (c *TopicClient) Send(ctx context.Context, message []byte, time2live *time.Time) (bool, error) {
 	var err error
-	switch reflect.TypeOf(c.writer).String() {
-	case "*kafka.Writer":
-		if time2live != nil {
-			err = c.writer.(*kafka.Writer).WriteMessages(ctx, kafka.Message{
-				Topic: c.topic,
-				Value: message,
-				Time:  *time2live,
-			})
-		} else {
-			err = c.writer.(*kafka.Writer).WriteMessages(ctx, kafka.Message{
-				Topic: c.topic,
-				Value: message,
-			})
-		}
-
-	default: // hahahahha
+	if time2live != nil {
+		err = c.writer.WriteMessages(ctx, kafka.Message{
+			Topic: c.topic,
+			Value: message,
+			Time:  *time2live,
+		})
+	} else {
+		err = c.writer.WriteMessages(ctx, kafka.Message{
+			Topic: c.topic,
+			Value: message,
+		})
 	}
 
 	if err != nil {

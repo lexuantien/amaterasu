@@ -82,6 +82,6 @@ func (sc *SubscriptionClient) Receive(ctx context.Context) (kafka.Message, error
 	return sc.reader.FetchMessage(ctx)
 }
 
-func (sc *SubscriptionClient) CommitMessage(ctx context.Context, msg kafka.Message) error {
+func (sc *SubscriptionClient) Complete(ctx context.Context, msg kafka.Message) error {
 	return sc.reader.CommitMessages(ctx, msg)
 }
