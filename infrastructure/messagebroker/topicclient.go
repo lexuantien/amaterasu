@@ -2,6 +2,7 @@ package messagebroker
 
 import (
 	"context"
+	"crypto/tls"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -14,8 +15,9 @@ type TopicClient struct {
 }
 
 func New_TopicClient(scr Scram, brokers []string, topic string) *TopicClient {
-	client := &TopicClient{}
-	client.topic = topic
+	client := &TopicClient{
+		topic: topic,
+	}
 
 	var al scram.Algorithm = scram.SHA512
 	if scr.Al256 {
@@ -27,8 +29,11 @@ func New_TopicClient(scr Scram, brokers []string, topic string) *TopicClient {
 	}
 
 	dialer := &kafka.Dialer{
-		Timeout:       10 * time.Second,
-		DualStack:     true,
+		Timeout:   10 * time.Second,
+		DualStack: true,
+		TLS: &tls.Config{
+			InsecureSkipVerify: true,
+		},
 		SASLMechanism: mechanism,
 	}
 
@@ -46,24 +51,12 @@ func (c *TopicClient) SetTopic(topic string) {
 	c.topic = topic
 }
 
-func (c *TopicClient) Send(ctx context.Context, message []byte, time2live *time.Time) (bool, error) {
-	var err error
-	if time2live != nil {
-		err = c.writer.WriteMessages(ctx, kafka.Message{
-			Topic: c.topic,
-			Value: message,
-			Time:  *time2live,
-		})
-	} else {
-		err = c.writer.WriteMessages(ctx, kafka.Message{
-			Topic: c.topic,
-			Value: message,
-		})
-	}
+func (c *TopicClient) Send(ctx context.Context, message, clazzType []byte) error {
 
-	if err != nil {
-		return false, err
-	}
+	return c.writer.WriteMessages(ctx, kafka.Message{
+		Topic: c.topic,
+		Key:   clazzType,
+		Value: message,
+	})
 
-	return true, nil
 }

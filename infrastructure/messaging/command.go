@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"leech-service/infrastructure/uuid"
-	"reflect"
 	"time"
 )
 
@@ -32,12 +31,8 @@ func (e *Envelop) Command() interface{} {
 	return e.Body
 }
 
-func (e *Envelop) CommandType() string {
-	return reflect.TypeOf(e.Body).Elem().Name()
-}
-
 //
 
 type ICommandHandler interface {
-	Handle(ICommand) error
+	Handle(interface{}) error
 }

@@ -36,8 +36,8 @@ func (cp *CommandProcessor) Register(commandHandler messaging.ICommandHandler, c
 	return cp.dispatcher.Register(commandHandler, commands...)
 }
 
-func (cp *CommandProcessor) processMessage(command messaging.ICommand) error {
-	return cp.dispatcher.Dispatch(command)
+func (cp *CommandProcessor) processMessage(command interface{}) {
+	cp.dispatcher.Dispatch(command)
 }
 
 func (cp *CommandProcessor) Start() {
@@ -59,20 +59,13 @@ func (cp *CommandProcessor) Stop() {
 
 // recieve message from message queue
 func (cp *CommandProcessor) onMessageReceived(ctx context.Context, message kafka.Message) {
-	payload, err := cp.serializer.Deserialize(message.Value)
-	if err != nil {
-		// add to dead letter
-		return
-	}
+	cmdClassType, _ := cp.serializer.Deserialize(message.Key, "")
+	msg, _ := cp.dispatcher.GetCommandType(cmdClassType.(string))
 
-	// handle payload here
-	cp.processMessage(payload.(messaging.ICommand))
+	msg, _ = cp.serializer.Deserialize(message.Value, msg)
+
+	cp.processMessage(msg)
 
 	// commit msg
-	err = cp.reciever.Complete(ctx, message)
-	if err != nil {
-		// add to dead letter
-		return
-	}
-
+	cp.reciever.Complete(ctx, message)
 }

@@ -5,5 +5,5 @@ type ISerializer interface {
 	// Serializes an object graph
 	Serialize(obj interface{}) ([]byte, error)
 	// Deserializes an object graph from the specified text reader.
-	Deserialize(message []byte) (interface{}, error)
+	Deserialize(message []byte, dataType interface{}) (interface{}, error)
 }

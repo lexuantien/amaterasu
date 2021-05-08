@@ -17,7 +17,10 @@ func (js JsonSerializer) Serialize(obj interface{}) ([]byte, error) {
 }
 
 // deserialize data
-func (js JsonSerializer) Deserialize(message []byte) (interface{}, error) {
-
-	return struct{}{}, nil
+func (js JsonSerializer) Deserialize(message []byte, dataType interface{}) (interface{}, error) {
+	err := json.Unmarshal(message, &dataType)
+	if err != nil {
+		return nil, err
+	}
+	return dataType, nil
 }
