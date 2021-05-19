@@ -16,6 +16,7 @@ type IMessageProcesser interface {
 	Stop()  // Stops the listener.
 }
 
+// Initializes a new instance
 type CommandProcessor struct {
 
 	// kafka subscriber

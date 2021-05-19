@@ -28,7 +28,7 @@ var (
 	}
 )
 
-func Test_send_command_to_kafka(t *testing.T) {
+func Test_send_command_to_kafka_then_success(t *testing.T) {
 
 	client := messagebroker.New_TopicClient(kafkaConfig)
 	sender := v2messaging.New_TopicSender(*client)   // clazz handle send message to kafka
@@ -54,7 +54,7 @@ func Test_send_command_to_kafka(t *testing.T) {
 	fmt.Println("done")
 }
 
-func Test_when_register_1_command_handler_success(t *testing.T) {
+func Test_register_1_command_handler_then_success(t *testing.T) {
 	client, err := messagebroker.New_SubscriptionClient(kafkaConfig, "z105")
 
 	if err != nil {
@@ -88,7 +88,7 @@ func Test_when_register_1_command_handler_success(t *testing.T) {
 	fmt.Println(1)
 }
 
-func Test_when_register_2_or_more_command_handlers_fail(t *testing.T) {
+func Test_register_more_handlers_then_fail(t *testing.T) {
 	client, err := messagebroker.New_SubscriptionClient(kafkaConfig, "z105")
 
 	if err != nil {
@@ -118,7 +118,7 @@ func Test_when_register_2_or_more_command_handlers_fail(t *testing.T) {
 
 	err = commandProcessor.Register(
 		commandHandler2, // command handler
-		Foo1{},          //! this command will error
+		Foo1{},          // this command will error because duplicate
 	)
 
 	fmt.Println(err)
@@ -131,7 +131,7 @@ func Test_when_register_2_or_more_command_handlers_fail(t *testing.T) {
 	fmt.Println(1)
 }
 
-func Test_when_register_2_or_more_command_handlers_success(t *testing.T) {
+func Test_register_more_handlers_then_success(t *testing.T) {
 	client, err := messagebroker.New_SubscriptionClient(kafkaConfig, "z105")
 
 	if err != nil {
@@ -161,10 +161,10 @@ func Test_when_register_2_or_more_command_handlers_success(t *testing.T) {
 
 	err = commandProcessor.Register(
 		commandHandler2, // command handler
-		Foo4{},          //? this command will success
+		Foo4{},          // this command will success
 	)
 
-	fmt.Println(err) // nil => success
+	fmt.Println(err) // nil
 
 	wg.Add(1)
 	// start fetch data from queue
