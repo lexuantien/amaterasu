@@ -2,8 +2,8 @@ package handling
 
 import (
 	"context"
-	"leech-service/infrastructure/messaging"
 	"leech-service/infrastructure/serialization"
+	v2messaging "leech-service/infrastructure/v2.messaging"
 	"sync"
 
 	"github.com/segmentio/kafka-go"
@@ -19,7 +19,7 @@ type IMessageProcesser interface {
 type CommandProcessor struct {
 
 	// kafka subscriber
-	reciever messaging.IMessageReceiver
+	reciever v2messaging.IMessageReceiver
 	// serialize kafka message to json - grpc - html ...
 	serializer serialization.ISerializer
 
@@ -35,7 +35,7 @@ type CommandProcessor struct {
 }
 
 //	Create new command processor
-func New_CommandProcessor(r messaging.IMessageReceiver, s serialization.ISerializer) *CommandProcessor {
+func New_CommandProcessor(r v2messaging.IMessageReceiver, s serialization.ISerializer) *CommandProcessor {
 	return &CommandProcessor{
 		reciever:   r,
 		serializer: s,
@@ -43,7 +43,7 @@ func New_CommandProcessor(r messaging.IMessageReceiver, s serialization.ISeriali
 	}
 }
 
-func (cp *CommandProcessor) Register(commandHandler messaging.ICommandHandler, commands ...interface{}) error {
+func (cp *CommandProcessor) Register(commandHandler v2messaging.ICommandHandler, commands ...interface{}) error {
 	return cp.dispatcher.Register(commandHandler, commands...)
 }
 
@@ -74,7 +74,9 @@ func (cp *CommandProcessor) Stop() {
 
 // recieve message from message queue
 func (cp *CommandProcessor) onMessageReceived(ctx context.Context, message kafka.Message) {
+
 	cmdClassType, _ := cp.serializer.Deserialize(message.Key, "")
+
 	msg, _ := cp.dispatcher.GetCommandType(cmdClassType.(string))
 
 	msg, _ = cp.serializer.Deserialize(message.Value, msg)

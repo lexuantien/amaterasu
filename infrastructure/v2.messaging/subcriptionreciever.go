@@ -1,4 +1,4 @@
-package messaging
+package v2messaging
 
 import (
 	"context"

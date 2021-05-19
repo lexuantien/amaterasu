@@ -2,13 +2,14 @@ package handling
 
 import (
 	"errors"
-	"leech-service/infrastructure/messaging"
 	"leech-service/infrastructure/utils"
+	v2messaging "leech-service/infrastructure/v2.messaging"
 	"reflect"
 )
 
+//
 type CommandDispatcher struct {
-	handler    messaging.ICommandHandler
+	handler    v2messaging.ICommandHandler
 	registries map[string]reflect.Type
 }
 
@@ -18,7 +19,7 @@ func New_CommandDispatcher() *CommandDispatcher {
 	}
 }
 
-func (cd *CommandDispatcher) Register(commandHandler messaging.ICommandHandler, commands ...interface{}) error {
+func (cd *CommandDispatcher) Register(commandHandler v2messaging.ICommandHandler, commands ...interface{}) error {
 
 	cd.handler = commandHandler
 

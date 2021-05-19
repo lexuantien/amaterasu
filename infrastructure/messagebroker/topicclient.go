@@ -10,53 +10,51 @@ import (
 )
 
 type TopicClient struct {
-	topic  string
+	cl     KafkaConfig
 	writer *kafka.Writer
 }
 
-func New_TopicClient(scr Scram, brokers []string, topic string) *TopicClient {
-	client := &TopicClient{
-		topic: topic,
+func New_TopicClient(cl KafkaConfig) *TopicClient {
+
+	tc := &TopicClient{}
+	tc.cl = cl
+
+	if cl.Scr != nil {
+		var al scram.Algorithm = scram.SHA512
+		if cl.Scr.Al256 {
+			al = scram.SHA256
+		}
+		mechanism, err := scram.Mechanism(al, cl.Scr.Username, cl.Scr.Password)
+		if err != nil {
+			panic(err)
+		}
+
+		dialer := &kafka.Dialer{
+			Timeout:   10 * time.Second,
+			DualStack: true,
+			TLS: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+			SASLMechanism: mechanism,
+		}
+
+		tc.writer = kafka.NewWriter(kafka.WriterConfig{
+			Brokers:      cl.Brokers,
+			Balancer:     &kafka.Hash{},
+			Dialer:       dialer,
+			RequiredAcks: int(kafka.RequireOne),
+		})
+	} else {
+
 	}
 
-	var al scram.Algorithm = scram.SHA512
-	if scr.Al256 {
-		al = scram.SHA256
-	}
-	mechanism, err := scram.Mechanism(al, scr.Username, scr.Password)
-	if err != nil {
-		panic(err)
-	}
-
-	dialer := &kafka.Dialer{
-		Timeout:   10 * time.Second,
-		DualStack: true,
-		TLS: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-		SASLMechanism: mechanism,
-	}
-
-	client.writer = kafka.NewWriter(kafka.WriterConfig{
-		Brokers:      brokers,
-		Balancer:     &kafka.Hash{},
-		Dialer:       dialer,
-		RequiredAcks: int(kafka.RequireOne),
-	})
-
-	return client
-}
-
-func (c *TopicClient) SetTopic(topic string) {
-	c.topic = topic
+	return tc
 }
 
 func (c *TopicClient) Send(ctx context.Context, message, clazzType []byte) error {
-
 	return c.writer.WriteMessages(ctx, kafka.Message{
-		Topic: c.topic,
+		Topic: c.cl.Topic,
 		Key:   clazzType,
 		Value: message,
 	})
-
 }

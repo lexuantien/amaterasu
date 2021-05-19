@@ -7,6 +7,7 @@ import (
 	"leech-service/infrastructure/messaging"
 	"leech-service/infrastructure/messaging/handling"
 	"leech-service/infrastructure/serialization"
+	"reflect"
 	"strconv"
 	"testing"
 )
@@ -24,6 +25,8 @@ func (o OrderCommandHander) Handle(command interface{}) error {
 		fmt.Println(1)
 	case *ConfirmOrder:
 	case *CancelOrder:
+	default:
+		panic("Command not found in this command handler")
 	}
 
 	return nil
@@ -46,15 +49,19 @@ type CancelOrder struct {
 func TestSendCommand(t *testing.T) {
 
 	// connect to kafka server
-	client := messagebroker.New_TopicClient(messagebroker.Scram{
-		Username: "ni61pj1b",
-		Password: "mWl_TWtiOPUKF4hRXVXPfULsKSoMzT0l",
-		Al256:    true,
-	}, []string{
-		"glider-01.srvs.cloudkafka.com:9094",
-		"glider-02.srvs.cloudkafka.com:9094",
-		"glider-03.srvs.cloudkafka.com:9094",
-	}, "ni61pj1b--topic-A")
+	client := messagebroker.New_TopicClient(messagebroker.KafkaConfig{
+		Scr: &messagebroker.Scram{
+			Username: "ni61pj1b",
+			Password: "mWl_TWtiOPUKF4hRXVXPfULsKSoMzT0l",
+			Al256:    true,
+		},
+		Brokers: []string{ // broker server
+			"glider-01.srvs.cloudkafka.com:9094",
+			"glider-02.srvs.cloudkafka.com:9094",
+			"glider-03.srvs.cloudkafka.com:9094",
+		},
+		Topic: "ni61pj1b--topic-A",
+	})
 
 	sender := messaging.New_TopicSender(*client)     // clazz handle send message to kafka
 	serializer := serialization.New_JsonSerializer() // serialize data before send
@@ -79,26 +86,27 @@ func TestSendCommand(t *testing.T) {
 }
 
 func TestProcessCommand(t *testing.T) {
-
+	fmt.Println(reflect.TypeOf(PlaceOrder{}))
 	// connect to kafka server
-	client, err := messagebroker.New_SubscriptionClient(messagebroker.Scram{
-		Username: "ni61pj1b",
-		Password: "mWl_TWtiOPUKF4hRXVXPfULsKSoMzT0l",
-		Al256:    true,
-	}, []string{ // broker server
-		"glider-01.srvs.cloudkafka.com:9094",
-		"glider-02.srvs.cloudkafka.com:9094",
-		"glider-03.srvs.cloudkafka.com:9094",
-	},
-		"ni61pj1b--topic-A", // coonsume topic
-		"z105",              // consumer-group
-	)
+	client, err := messagebroker.New_SubscriptionClient(messagebroker.KafkaConfig{
+		Scr: &messagebroker.Scram{
+			Username: "ni61pj1b",
+			Password: "mWl_TWtiOPUKF4hRXVXPfULsKSoMzT0l",
+			Al256:    true,
+		},
+		Brokers: []string{ // broker server
+			"glider-01.srvs.cloudkafka.com:9094",
+			"glider-02.srvs.cloudkafka.com:9094",
+			"glider-03.srvs.cloudkafka.com:9094",
+		},
+		Topic: "ni61pj1b--topic-A",
+	}, "z105")
 
 	if err != nil {
 		panic(err)
 	}
 
-	// clazz use to fetch message from kafka
+	// class use to fetch message from kafka
 	receiver := messaging.New_SubscriptionReciever(client)
 	// handle deserialize
 	serializer := serialization.New_JsonSerializer()
