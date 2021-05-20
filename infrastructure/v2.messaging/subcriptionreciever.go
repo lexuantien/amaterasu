@@ -2,14 +2,16 @@ package v2messaging
 
 import (
 	"context"
+	"fmt"
 	"leech-service/infrastructure/messagebroker"
+	"os"
 	"sync"
 	"time"
 
-	"github.com/segmentio/kafka-go"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
-type OnRecieveMessage func(context.Context, kafka.Message)
+type OnRecieveMessage func(context.Context, *kafka.Message)
 
 // Abstracts the behavior of a receiving component that raises
 // an event for every received event.
@@ -19,7 +21,7 @@ type IMessageReceiver interface {
 	// Stops the listener.
 	Stop(context.CancelFunc)
 	// Complete process message
-	Complete(context.Context, kafka.Message) error
+	Complete(context.Context, *kafka.Message) error
 }
 
 type SubscriptionReciever struct {
@@ -46,20 +48,23 @@ func (sr *SubscriptionReciever) Start(ctx context.Context, onReceiveMessage OnRe
 
 func (sr *SubscriptionReciever) receiveMessages(ctx context.Context) {
 	for {
-
-		msg, err := sr.client.Receive(ctx)
-
-		if err != nil {
-
-			// Retry the receive loop if there was an error.
+		ev := sr.client.Receive(ctx)
+		switch e := ev.(type) {
+		case kafka.AssignedPartitions:
+			sr.client.Assign(e)
+		case kafka.RevokedPartitions:
+			sr.client.Unassign()
+		case *kafka.Message:
+			sr.messageHandler(ctx, e)
+		case kafka.PartitionEOF:
+			fmt.Printf("%% Reached %v\n", e)
+		case kafka.Error:
+			fmt.Fprintf(os.Stderr, "%% Error: %v\n", e)
+			// Retry the receive loop if there was an error
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
-
-		sr.messageHandler(ctx, msg)
-
 	}
-
 }
 
 func (sr *SubscriptionReciever) Stop(cancelFunc context.CancelFunc) {
@@ -69,6 +74,6 @@ func (sr *SubscriptionReciever) Stop(cancelFunc context.CancelFunc) {
 	sr.lock.Unlock()
 }
 
-func (sr *SubscriptionReciever) Complete(ctx context.Context, msg kafka.Message) error {
+func (sr *SubscriptionReciever) Complete(ctx context.Context, msg *kafka.Message) error {
 	return sr.client.Complete(ctx, msg)
 }

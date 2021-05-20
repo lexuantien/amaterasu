@@ -16,10 +16,10 @@ func New_CommandHander2() *CommandHander2 {
 
 //* command handler func
 func (o CommandHander1) Handle(command interface{}) error {
-	switch command.(type) {
+	switch cmd := command.(type) {
 
 	case *Foo1:
-		fmt.Println(command.(*Foo1))
+		fmt.Println(cmd)
 	case *Foo2:
 	case *Foo3:
 

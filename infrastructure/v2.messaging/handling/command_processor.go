@@ -2,11 +2,12 @@ package handling
 
 import (
 	"context"
+	"fmt"
 	"leech-service/infrastructure/serialization"
 	v2messaging "leech-service/infrastructure/v2.messaging"
 	"sync"
 
-	"github.com/segmentio/kafka-go"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 // Provides basic common processing code for components that handle
@@ -48,8 +49,8 @@ func (cp *CommandProcessor) Register(commandHandler v2messaging.ICommandHandler,
 	return cp.dispatcher.Register(commandHandler, commands...)
 }
 
-func (cp *CommandProcessor) processMessage(command interface{}) {
-	cp.dispatcher.Dispatch(command)
+func (cp *CommandProcessor) processMessage(command interface{}) bool {
+	return cp.dispatcher.Dispatch(command)
 }
 
 func (cp *CommandProcessor) Start() {
@@ -74,16 +75,31 @@ func (cp *CommandProcessor) Stop() {
 }
 
 // recieve message from message queue
-func (cp *CommandProcessor) onMessageReceived(ctx context.Context, message kafka.Message) {
+func (cp *CommandProcessor) onMessageReceived(ctx context.Context, message *kafka.Message) {
 
-	cmdClassType, _ := cp.serializer.Deserialize(message.Key, "")
+	cmdClassType, _ := cp.serializer.Deserialize(message.Headers[0].Value, "")
 
 	msg, _ := cp.dispatcher.GetCommandType(cmdClassType.(string))
 
 	msg, _ = cp.serializer.Deserialize(message.Value, msg)
 
-	cp.processMessage(msg)
+	ok := cp.processMessage(msg)
 
 	// commit msg
-	cp.reciever.Complete(ctx, message)
+	if ok {
+		loop := 0
+		for {
+			if err := cp.reciever.Complete(ctx, message); err != nil {
+				fmt.Println(err)
+				if loop == 3 {
+					// TODO use CB to handle error
+					// TODO add to dead letter to commit again
+					return
+				}
+				loop++
+			} else {
+				break
+			}
+		}
+	}
 }

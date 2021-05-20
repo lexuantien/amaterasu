@@ -2,19 +2,19 @@ package handling
 
 import (
 	"errors"
-	"leech-service/infrastructure/messaging"
 	"leech-service/infrastructure/utils"
+	v2messaging "leech-service/infrastructure/v2.messaging"
 	"reflect"
 )
 
 type CommandDispatcher struct {
-	handlers   map[reflect.Type]messaging.ICommandHandler
+	handlers   map[reflect.Type]v2messaging.ICommandHandler
 	registries map[string]reflect.Type
 }
 
 func New_CommandDispatcher() *CommandDispatcher {
 	return &CommandDispatcher{
-		handlers:   make(map[reflect.Type]messaging.ICommandHandler),
+		handlers:   make(map[reflect.Type]v2messaging.ICommandHandler),
 		registries: make(map[string]reflect.Type),
 	}
 }
@@ -25,12 +25,12 @@ type _type struct {
 }
 
 // Registers the specified command handler.
-func (cd *CommandDispatcher) Register(commandHandler messaging.ICommandHandler, commands ...interface{}) error {
+func (cd *CommandDispatcher) Register(commandHandler v2messaging.ICommandHandler, commands ...interface{}) error {
 	types := make([]_type, len(commands))
 	for i, command := range commands {
 		t, n := utils.GetTypeName(command)
 		if _, ok := cd.handlers[t]; ok {
-			return errors.New("The command handled by the received handler already has a registered handler.")
+			return errors.New("the command handled by the received handler already has a registered handler")
 		}
 		types[i] = _type{t, n}
 	}

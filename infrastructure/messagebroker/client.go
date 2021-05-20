@@ -7,6 +7,6 @@ type Scram struct {
 
 type KafkaConfig struct {
 	Scr     *Scram
-	Brokers []string
+	Brokers string
 	Topic   string
 }

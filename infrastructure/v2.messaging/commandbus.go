@@ -5,6 +5,8 @@ import (
 	"leech-service/infrastructure/serialization"
 	"leech-service/infrastructure/utils"
 	"leech-service/infrastructure/uuid"
+
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 type ICommandBus interface {
@@ -19,17 +21,15 @@ type CommandBus struct {
 
 func New_CommandBus(sen IMessageSender, ser serialization.ISerializer) *CommandBus {
 	return &CommandBus{
-		sen,
-		ser,
+		sender:     sen,
+		serializer: ser,
 	}
 }
 
 func (bus CommandBus) Send(ctx context.Context, command Envelop) error {
-	message, clazzType := bus.buildMessage(command)
-	//?? handle command.Delay fail
-	/// . . .
-	// Send to kafka
-	return bus.sender.Send(ctx, message, clazzType)
+	message := bus.buildMessage(command)
+
+	return bus.sender.Send(ctx, message) // Send to kafka
 }
 
 func (bus CommandBus) Sends(ctx context.Context, commands ...Envelop) error {
@@ -43,18 +43,31 @@ func (bus CommandBus) Sends(ctx context.Context, commands ...Envelop) error {
 	return nil
 }
 
-func (bus CommandBus) buildMessage(command Envelop) ([]byte, []byte) {
-	message, _ := bus.serializer.Serialize(command.Body)
+func (bus CommandBus) buildMessage(command Envelop) *kafka.Message {
+
+	message := &kafka.Message{}
+	var uid uuid.UUID
+	if command.Id == uuid.Nil {
+		uid = uuid.New()
+	}
+
+	idByte, _ := bus.serializer.Serialize(uid)
+	message.Key = idByte
+
+	val, _ := bus.serializer.Serialize(command.Body)
+	message.Value = val
+
 	_, name := utils.GetTypeName(command.Body)
-	clazzType, _ := bus.serializer.Serialize(name)
+	cmdType, _ := bus.serializer.Serialize(name)
 
-	if command.Id == uuid.Nil { // create new command id
-		command.Id = uuid.New()
-	}
+	message.Headers = append(message.Headers, kafka.Header{
+		Key:   "cmd-type",
+		Value: cmdType,
+	})
 
-	if command.CorrelationId == uuid.Nil {
-		command.CorrelationId = uuid.New()
-	}
+	// TODO handle correlationId
+	// TODO handle time2live message
+	// TODO handle command delay time
 
-	return message, clazzType
+	return message
 }

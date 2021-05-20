@@ -2,15 +2,14 @@ package messagebroker
 
 import (
 	"context"
-	"crypto/tls"
+	"errors"
 
-	"github.com/segmentio/kafka-go"
-	"github.com/segmentio/kafka-go/sasl/scram"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 type SubscriptionClient struct {
-	cl     KafkaConfig
-	reader *kafka.Reader
+	cl       KafkaConfig
+	consumer *kafka.Consumer
 }
 
 // :Create
@@ -19,40 +18,61 @@ func New_SubscriptionClient(cl KafkaConfig, groupID string) (*SubscriptionClient
 	sc := &SubscriptionClient{}
 	sc.cl = cl
 
-	if cl.Scr != nil {
-		var al scram.Algorithm = scram.SHA512
-		if cl.Scr.Al256 {
-			al = scram.SHA256
-		}
-		mechanism, err := scram.Mechanism(al, cl.Scr.Username, cl.Scr.Password)
-		if err != nil {
-			panic(err)
-		}
+	config := &kafka.ConfigMap{}
 
-		sc.reader = kafka.NewReader(kafka.ReaderConfig{
-			Brokers:  cl.Brokers,
-			Topic:    cl.Topic,
-			GroupID:  groupID, // Send messages to only one subscriber per group.
-			MinBytes: 10e3,    // 10KB
-			MaxBytes: 10e6,    // 10MB
-			Dialer: &kafka.Dialer{
-				TLS: &tls.Config{
-					InsecureSkipVerify: true,
-				},
-				SASLMechanism: mechanism,
-			},
-		})
+	if cl.Scr != nil {
+		var al string = "SCRAM-SHA-256"
+		if !cl.Scr.Al256 {
+			al = "SCRAM-SHA-512"
+		}
+		config = &kafka.ConfigMap{
+			"metadata.broker.list":            cl.Brokers,
+			"security.protocol":               "SASL_SSL",
+			"sasl.mechanisms":                 al,
+			"sasl.username":                   cl.Scr.Username,
+			"sasl.password":                   cl.Scr.Password,
+			"group.id":                        groupID,
+			"go.events.channel.enable":        true,
+			"go.application.rebalance.enable": true,
+			// "enable.auto.commit":              false,
+			"default.topic.config": kafka.ConfigMap{"auto.offset.reset": "earliest"},
+			// "debug":                           "generic,broker,security",
+		}
 	} else { // define later
-		return nil, nil
+		return nil, errors.New("only support kafka scram connect")
+	}
+
+	c, err := kafka.NewConsumer(config)
+
+	if err != nil {
+		panic(err)
+	}
+
+	sc.consumer = c
+	err = sc.consumer.Subscribe(sc.cl.Topic, nil)
+
+	if err != nil {
+		return nil, errors.New("kafka login fail")
 	}
 
 	return sc, nil
 }
 
-func (sc *SubscriptionClient) Receive(ctx context.Context) (kafka.Message, error) {
-	return sc.reader.FetchMessage(ctx)
+func (sc *SubscriptionClient) Receive(ctx context.Context) kafka.Event {
+	ev := <-sc.consumer.Events()
+	return ev
+	// return sc.consumer.Poll(100)
 }
 
-func (sc *SubscriptionClient) Complete(ctx context.Context, msg kafka.Message) error {
-	return sc.reader.CommitMessages(ctx, msg)
+func (sc *SubscriptionClient) Complete(ctx context.Context, msg *kafka.Message) error {
+	_, err := sc.consumer.CommitMessage(msg)
+	return err
+}
+
+func (sc *SubscriptionClient) Assign(e kafka.AssignedPartitions) {
+	sc.consumer.Assign(e.Partitions)
+}
+
+func (sc *SubscriptionClient) Unassign() {
+	sc.consumer.Unassign()
 }
