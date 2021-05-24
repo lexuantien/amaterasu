@@ -19,11 +19,6 @@ func New_CommandDispatcher() *CommandDispatcher {
 	}
 }
 
-type _type struct {
-	k reflect.Type
-	v string
-}
-
 // Registers the specified command handler.
 func (cd *CommandDispatcher) Register(commandHandler v2messaging.ICommandHandler, commands ...interface{}) error {
 	types := make([]_type, len(commands))
@@ -45,7 +40,7 @@ func (cd *CommandDispatcher) Register(commandHandler v2messaging.ICommandHandler
 }
 
 // Processes the message by calling the registered handler.
-func (cd *CommandDispatcher) Dispatch(command interface{}) bool {
+func (cd *CommandDispatcher) ProcessMessage(command interface{}) bool {
 	t, _ := utils.GetTypeName(command)
 
 	if handler, ok := cd.handlers[t]; ok {

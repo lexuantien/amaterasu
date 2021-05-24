@@ -26,13 +26,13 @@ func New_SubscriptionClient(cl KafkaConfig, groupID string) (*SubscriptionClient
 			al = "SCRAM-SHA-512"
 		}
 		config = &kafka.ConfigMap{
-			"metadata.broker.list":            cl.Brokers,
-			"security.protocol":               "SASL_SSL",
-			"sasl.mechanisms":                 al,
-			"sasl.username":                   cl.Scr.Username,
-			"sasl.password":                   cl.Scr.Password,
-			"group.id":                        groupID,
-			"go.events.channel.enable":        true,
+			"metadata.broker.list": cl.Brokers,
+			"security.protocol":    "SASL_SSL",
+			"sasl.mechanisms":      al,
+			"sasl.username":        cl.Scr.Username,
+			"sasl.password":        cl.Scr.Password,
+			"group.id":             groupID,
+			// "go.events.channel.enable":        true,
 			"go.application.rebalance.enable": true,
 			// "enable.auto.commit":              false,
 			"default.topic.config": kafka.ConfigMap{"auto.offset.reset": "earliest"},
@@ -59,9 +59,9 @@ func New_SubscriptionClient(cl KafkaConfig, groupID string) (*SubscriptionClient
 }
 
 func (sc *SubscriptionClient) Receive(ctx context.Context) kafka.Event {
-	ev := <-sc.consumer.Events()
-	return ev
-	// return sc.consumer.Poll(100)
+	// ev := <-sc.consumer.Events()
+	// return ev
+	return sc.consumer.Poll(100)
 }
 
 func (sc *SubscriptionClient) Complete(ctx context.Context, msg *kafka.Message) error {

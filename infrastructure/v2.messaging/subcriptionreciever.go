@@ -3,7 +3,7 @@ package v2messaging
 import (
 	"context"
 	"fmt"
-	"leech-service/infrastructure/messagebroker"
+	kafkaBroker "leech-service/infrastructure/kafka.broker"
 	"os"
 	"sync"
 	"time"
@@ -26,14 +26,14 @@ type IMessageReceiver interface {
 
 type SubscriptionReciever struct {
 	lock           sync.Mutex
-	client         *messagebroker.SubscriptionClient
+	client         *kafkaBroker.SubscriptionClient
 	messageHandler OnRecieveMessage
 }
 
 // Create.
 //	Initializes a new instance of the SubscriptionReciever.
 // @param c kafka client.
-func New_SubscriptionReciever(c *messagebroker.SubscriptionClient) *SubscriptionReciever {
+func New_SubscriptionReciever(c *kafkaBroker.SubscriptionClient) *SubscriptionReciever {
 	return &SubscriptionReciever{
 		client: c,
 	}

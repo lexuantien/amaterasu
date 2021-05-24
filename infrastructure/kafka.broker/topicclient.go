@@ -52,9 +52,9 @@ func (c *TopicClient) Send(ctx context.Context, message *kafka.Message) error {
 	// Optional delivery channel, if not specified the Producer object's
 	// .Events channel is used.
 	deliveryChan := make(chan kafka.Event)
-	message.TopicPartition = kafka.TopicPartition{
-		Topic:     &c.cl.Topic,
-		Partition: kafka.PartitionAny,
+
+	if message.TopicPartition.Topic == nil {
+		message.TopicPartition.Topic = &c.cl.Topic
 	}
 
 	c.producer.Produce(message, deliveryChan)

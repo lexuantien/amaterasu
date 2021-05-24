@@ -3,7 +3,7 @@ package handling
 import (
 	"context"
 	"fmt"
-	"leech-service/infrastructure/messagebroker"
+	kafkaBroker "leech-service/infrastructure/kafka.broker"
 	"leech-service/infrastructure/serialization"
 	v2messaging "leech-service/infrastructure/v2.messaging"
 	"strconv"
@@ -13,8 +13,8 @@ import (
 
 var (
 	wg          = sync.WaitGroup{}
-	kafkaConfig = messagebroker.KafkaConfig{
-		Scr: &messagebroker.Scram{
+	kafkaConfig = kafkaBroker.KafkaConfig{
+		Scr: &kafkaBroker.Scram{
 			Username: "ni61pj1b",
 			Password: "mWl_TWtiOPUKF4hRXVXPfULsKSoMzT0l",
 			Al256:    true,
@@ -26,13 +26,13 @@ var (
 
 func Test_send_command_to_kafka_then_success(t *testing.T) {
 
-	commandClient := messagebroker.New_TopicClient(kafkaConfig)
+	commandClient := kafkaBroker.New_TopicClient(kafkaConfig)
 	sender := v2messaging.New_TopicSender(*commandClient)
 	serializer := serialization.New_JsonSerializer()
 	bus := v2messaging.New_CommandBus(sender, serializer)
 
 	for i := 0; i < 5; i++ {
-		ok := bus.Send(context.Background(), v2messaging.CreateCommand(Foo1{
+		ok := bus.Send(context.Background(), v2messaging.EnvelopeWrap(Foo1{
 			ProductId:   "z" + strconv.Itoa(i),
 			Quantity:    uint(i),
 			Description: "Bàn phải xuất xứ từ Nhật FOO Bản",
@@ -49,7 +49,7 @@ func Test_send_command_to_kafka_then_success(t *testing.T) {
 }
 
 func Test_process_message_with_1_handler_then_success(t *testing.T) {
-	subscriptionClient, err := messagebroker.New_SubscriptionClient(kafkaConfig, "z107")
+	subscriptionClient, err := kafkaBroker.New_SubscriptionClient(kafkaConfig, "z107")
 
 	if err != nil {
 		panic(err)
@@ -71,7 +71,7 @@ func Test_process_message_with_1_handler_then_success(t *testing.T) {
 }
 
 func Test_process_message_more_handlers_then_fail(t *testing.T) {
-	subscriptionClient, err := messagebroker.New_SubscriptionClient(kafkaConfig, "z105")
+	subscriptionClient, err := kafkaBroker.New_SubscriptionClient(kafkaConfig, "z105")
 
 	if err != nil {
 		panic(err)
@@ -108,7 +108,7 @@ func Test_process_message_more_handlers_then_fail(t *testing.T) {
 }
 
 func Test_process_message_more_handlers_then_success(t *testing.T) {
-	subscriptionClient, err := messagebroker.New_SubscriptionClient(kafkaConfig, "z105")
+	subscriptionClient, err := kafkaBroker.New_SubscriptionClient(kafkaConfig, "z105")
 
 	if err != nil {
 		panic(err)

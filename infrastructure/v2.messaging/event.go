@@ -1,5 +1,5 @@
 package v2messaging
 
-type ICommandHandler interface {
+type IEventHandler interface {
 	Handle(interface{}) error
 }

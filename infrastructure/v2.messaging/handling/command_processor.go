@@ -17,11 +17,11 @@ type IMessageProcesser interface {
 	Stop()  // Stops the listener.
 }
 
-// Initializes a new instance
+// Processes incoming commands from the bus and routes them to the appropriate
 type CommandProcessor struct {
 
 	// kafka subscriber
-	reciever v2messaging.IMessageReceiver
+	receiver v2messaging.IMessageReceiver
 	// serialize kafka message to json - grpc - html ...
 	serializer serialization.ISerializer
 
@@ -29,7 +29,7 @@ type CommandProcessor struct {
 	started bool
 
 	// uses a peek/lock technique to retrieve a message from a subscription
-	lock       sync.Mutex
+	lockObject sync.Mutex
 	cancelFunc context.CancelFunc
 
 	// dispatch command to specific command handler
@@ -37,41 +37,46 @@ type CommandProcessor struct {
 }
 
 //	Create new command processor
+// Initializes a new instance of the CommandProcessor
+// @param r Kafka receive maeesage
+// @param s The serializer to use for the message body.
 func New_CommandProcessor(r v2messaging.IMessageReceiver, s serialization.ISerializer) *CommandProcessor {
 	return &CommandProcessor{
-		reciever:   r,
+		receiver:   r,
 		serializer: s,
 		dispatcher: New_CommandDispatcher(),
 	}
 }
 
+// Registers the specified command handler.
 func (cp *CommandProcessor) Register(commandHandler v2messaging.ICommandHandler, commands ...interface{}) error {
 	return cp.dispatcher.Register(commandHandler, commands...)
 }
 
+// Processes the message by calling the registered handler.
 func (cp *CommandProcessor) processMessage(command interface{}) bool {
-	return cp.dispatcher.Dispatch(command)
+	return cp.dispatcher.ProcessMessage(command)
 }
 
 func (cp *CommandProcessor) Start() {
 	// lock
-	cp.lock.Lock()
+	cp.lockObject.Lock()
 	if !cp.started {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		cp.cancelFunc = cancelFunc
-		cp.reciever.Start(ctx, cp.onMessageReceived)
+		cp.receiver.Start(ctx, cp.onMessageReceived)
 		cp.started = true
 	}
-	cp.lock.Unlock()
+	cp.lockObject.Unlock()
 }
 
 func (cp *CommandProcessor) Stop() {
-	cp.lock.Lock()
+	cp.lockObject.Lock()
 	if cp.started {
-		cp.reciever.Stop(cp.cancelFunc)
+		cp.receiver.Stop(cp.cancelFunc)
 		cp.started = false
 	}
-	cp.lock.Unlock()
+	cp.lockObject.Unlock()
 }
 
 // recieve message from message queue
@@ -89,7 +94,7 @@ func (cp *CommandProcessor) onMessageReceived(ctx context.Context, message *kafk
 	if ok {
 		loop := 0
 		for {
-			if err := cp.reciever.Complete(ctx, message); err != nil {
+			if err := cp.receiver.Complete(ctx, message); err != nil {
 				fmt.Println(err)
 				if loop == 3 {
 					// TODO use CB to handle error

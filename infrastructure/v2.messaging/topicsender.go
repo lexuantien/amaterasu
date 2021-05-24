@@ -2,7 +2,7 @@ package v2messaging
 
 import (
 	"context"
-	"leech-service/infrastructure/messagebroker"
+	kafkaBroker "leech-service/infrastructure/kafka.broker"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
@@ -12,11 +12,11 @@ type IMessageSender interface {
 }
 
 type TopicSender struct {
-	client messagebroker.TopicClient
+	client kafkaBroker.TopicClient
 }
 
 // :Create
-func New_TopicSender(c messagebroker.TopicClient) TopicSender {
+func New_TopicSender(c kafkaBroker.TopicClient) TopicSender {
 	return TopicSender{
 		client: c,
 	}
