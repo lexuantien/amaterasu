@@ -2,16 +2,16 @@ package v2messaging
 
 import (
 	"context"
-	"leech-service/infrastructure/serialization"
-	"leech-service/infrastructure/utils"
-	"leech-service/infrastructure/uuid"
+	"leech-service/cqrs/infrastructure/serialization"
+	"leech-service/cqrs/infrastructure/utils"
+	"leech-service/cqrs/infrastructure/uuid"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 type ICommandBus interface {
-	Send(Envelop) (bool, error)
-	Sends(...Envelop) (bool, error)
+	Send(Envelope) (bool, error)
+	Sends(...Envelope) (bool, error)
 }
 
 type CommandBus struct {
@@ -26,13 +26,13 @@ func New_CommandBus(sen IMessageSender, ser serialization.ISerializer) *CommandB
 	}
 }
 
-func (bus CommandBus) Send(ctx context.Context, command Envelop) error {
+func (bus CommandBus) Send(ctx context.Context, command Envelope) error {
 	message := bus.buildMessage(command)
 
 	return bus.sender.Send(ctx, message) // Send to kafka
 }
 
-func (bus CommandBus) Sends(ctx context.Context, commands ...Envelop) error {
+func (bus CommandBus) Sends(ctx context.Context, commands ...Envelope) error {
 	for _, command := range commands {
 		err := bus.Send(ctx, command)
 		if err != nil {
@@ -43,7 +43,7 @@ func (bus CommandBus) Sends(ctx context.Context, commands ...Envelop) error {
 	return nil
 }
 
-func (bus CommandBus) buildMessage(command Envelop) *kafka.Message {
+func (bus CommandBus) buildMessage(command Envelope) *kafka.Message {
 
 	message := &kafka.Message{}
 	var uid uuid.UUID

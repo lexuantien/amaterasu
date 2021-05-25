@@ -2,16 +2,16 @@ package v2messaging
 
 import (
 	"context"
-	"leech-service/infrastructure/serialization"
-	"leech-service/infrastructure/utils"
-	"leech-service/infrastructure/uuid"
+	"leech-service/cqrs/infrastructure/serialization"
+	"leech-service/cqrs/infrastructure/utils"
+	"leech-service/cqrs/infrastructure/uuid"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 type IEventBus interface {
-	Publish(event Envelop) (bool, error)
-	Publishes(events ...Envelop) (bool, error)
+	Publish(event Envelope) (bool, error)
+	Publishes(events ...Envelope) (bool, error)
 }
 
 // An event bus that sends serialized object payloads through IMessageSender
@@ -27,13 +27,13 @@ func New_EventBus(sen IMessageSender, ser serialization.ISerializer) *EventBus {
 	}
 }
 
-func (bus EventBus) Publish(ctx context.Context, event Envelop) error {
+func (bus EventBus) Publish(ctx context.Context, event Envelope) error {
 	message := bus.buildMessage(event)
 
 	return bus.sender.Send(ctx, message) // Send to kafka
 }
 
-func (bus EventBus) Publishes(ctx context.Context, events ...Envelop) error {
+func (bus EventBus) Publishes(ctx context.Context, events ...Envelope) error {
 	for _, event := range events {
 		err := bus.Publish(ctx, event)
 		if err != nil {
@@ -43,7 +43,7 @@ func (bus EventBus) Publishes(ctx context.Context, events ...Envelop) error {
 	return nil
 }
 
-func (bus EventBus) buildMessage(event Envelop) *kafka.Message {
+func (bus EventBus) buildMessage(event Envelope) *kafka.Message {
 	message := &kafka.Message{}
 
 	var uid uuid.UUID

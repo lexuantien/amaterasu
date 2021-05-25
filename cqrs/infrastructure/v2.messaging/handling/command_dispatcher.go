@@ -2,8 +2,8 @@ package handling
 
 import (
 	"errors"
-	"leech-service/infrastructure/utils"
-	v2messaging "leech-service/infrastructure/v2.messaging"
+	"leech-service/cqrs/infrastructure/utils"
+	v2messaging "leech-service/cqrs/infrastructure/v2.messaging"
 	"reflect"
 )
 

@@ -3,31 +3,18 @@ package handling
 import (
 	"context"
 	"fmt"
-	kafkaBroker "leech-service/infrastructure/kafka.broker"
-	"leech-service/infrastructure/serialization"
-	v2messaging "leech-service/infrastructure/v2.messaging"
+	kafkaa "leech-service/cqrs/infrastructure/kafkaa"
+	"leech-service/cqrs/infrastructure/serialization"
+	v2messaging "leech-service/cqrs/infrastructure/v2.messaging"
+	"leech-service/cqrs/infrastructure/v2.messaging/handling"
 	"strconv"
-	"sync"
 	"testing"
-)
-
-var (
-	wg          = sync.WaitGroup{}
-	kafkaConfig = kafkaBroker.KafkaConfig{
-		Scr: &kafkaBroker.Scram{
-			Username: "ni61pj1b",
-			Password: "mWl_TWtiOPUKF4hRXVXPfULsKSoMzT0l",
-			Al256:    true,
-		},
-		Brokers: "glider-01.srvs.cloudkafka.com:9094,glider-02.srvs.cloudkafka.com:9094,glider-03.srvs.cloudkafka.com:9094",
-		Topic:   "ni61pj1b--topic-A",
-	}
 )
 
 func Test_send_command_to_kafka_then_success(t *testing.T) {
 
-	commandClient := kafkaBroker.New_TopicClient(kafkaConfig)
-	sender := v2messaging.New_TopicSender(*commandClient)
+	commandClient := kafkaa.New_kafkaa(kafkaConfig)
+	sender := v2messaging.New_Producer(*commandClient)
 	serializer := serialization.New_JsonSerializer()
 	bus := v2messaging.New_CommandBus(sender, serializer)
 
@@ -49,19 +36,15 @@ func Test_send_command_to_kafka_then_success(t *testing.T) {
 }
 
 func Test_process_message_with_1_handler_then_success(t *testing.T) {
-	subscriptionClient, err := kafkaBroker.New_SubscriptionClient(kafkaConfig, "z107")
+	subscriptionClient, _ := kafkaa.New_KafkaServer(kafkaConfig, "z107")
 
-	if err != nil {
-		panic(err)
-	}
-
-	receiver := v2messaging.New_SubscriptionReciever(subscriptionClient)
+	receiver := v2messaging.New_Consumer(subscriptionClient)
 
 	serializer := serialization.New_JsonSerializer()
 
 	orderFooCommandHandler := New_CommandHander1()
 
-	commandProcessor := New_CommandProcessor(receiver, serializer)
+	commandProcessor := handling.New_CommandProcessor(receiver, serializer)
 	commandProcessor.Register(orderFooCommandHandler, Foo1{}, Foo2{}, Foo3{})
 
 	wg.Add(1)
@@ -71,20 +54,20 @@ func Test_process_message_with_1_handler_then_success(t *testing.T) {
 }
 
 func Test_process_message_more_handlers_then_fail(t *testing.T) {
-	subscriptionClient, err := kafkaBroker.New_SubscriptionClient(kafkaConfig, "z105")
+	subscriptionClient, err := kafkaa.New_KafkaServer(kafkaConfig, "z105")
 
 	if err != nil {
 		panic(err)
 	}
 
-	receiver := v2messaging.New_SubscriptionReciever(subscriptionClient)
+	receiver := v2messaging.New_Consumer(subscriptionClient)
 
 	serializer := serialization.New_JsonSerializer()
 
 	commandHandler1 := New_CommandHander1()
 	commandHandler2 := New_CommandHander2()
 
-	commandProcessor := New_CommandProcessor(receiver, serializer)
+	commandProcessor := handling.New_CommandProcessor(receiver, serializer)
 
 	commandProcessor.Register(
 		commandHandler1,
@@ -108,20 +91,20 @@ func Test_process_message_more_handlers_then_fail(t *testing.T) {
 }
 
 func Test_process_message_more_handlers_then_success(t *testing.T) {
-	subscriptionClient, err := kafkaBroker.New_SubscriptionClient(kafkaConfig, "z105")
+	subscriptionClient, err := kafkaa.New_KafkaServer(kafkaConfig, "z105")
 
 	if err != nil {
 		panic(err)
 	}
 
-	receiver := v2messaging.New_SubscriptionReciever(subscriptionClient)
+	receiver := v2messaging.New_Consumer(subscriptionClient)
 
 	serializer := serialization.New_JsonSerializer()
 
 	commandHandler1 := New_CommandHander1()
 	commandHandler2 := New_CommandHander2()
 
-	commandProcessor := New_CommandProcessor(receiver, serializer)
+	commandProcessor := handling.New_CommandProcessor(receiver, serializer)
 
 	commandProcessor.Register(
 		commandHandler1,

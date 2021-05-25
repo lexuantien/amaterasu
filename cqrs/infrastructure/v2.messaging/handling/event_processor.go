@@ -3,8 +3,8 @@ package handling
 import (
 	"context"
 	"fmt"
-	"leech-service/infrastructure/serialization"
-	v2messaging "leech-service/infrastructure/v2.messaging"
+	"leech-service/cqrs/infrastructure/serialization"
+	v2messaging "leech-service/cqrs/infrastructure/v2.messaging"
 	"sync"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"

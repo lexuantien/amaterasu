@@ -3,19 +3,12 @@ package handling
 import (
 	"context"
 	"fmt"
-	"leech-service/infrastructure/serialization"
-	v2messaging "leech-service/infrastructure/v2.messaging"
+	"leech-service/cqrs/infrastructure/serialization"
+	v2messaging "leech-service/cqrs/infrastructure/v2.messaging"
 	"sync"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
-
-// Provides basic common processing code for components that handle
-// incoming messages from a receiver.
-type IMessageProcesser interface {
-	Start() // Starts the listener.
-	Stop()  // Stops the listener.
-}
 
 // Processes incoming commands from the bus and routes them to the appropriate
 type CommandProcessor struct {

@@ -1,7 +1,7 @@
 package v2messaging
 
 import (
-	"leech-service/infrastructure/uuid"
+	"leech-service/cqrs/infrastructure/uuid"
 	"time"
 )
 
@@ -13,21 +13,22 @@ const (
 	DELETE
 )
 
-// Command represents an actor intention to alter the state of the system
-type Envelop struct {
+// Provides the envelope for an object that will be sent to a bus.
+type Envelope struct {
 
 	// Identify
 	Id uuid.UUID
 
-	//
+	// for tracing and monitoring
 	CorrelationId   uuid.UUID
 	TraceIdentifier uuid.UUID
 
-	//
-	Body interface{} // Wrap the command
+	// Wrap the command
+	Body interface{}
 
-	//
-	Delay     *time.Time
+	// Gets or sets the delay for sending, enqueing or processing the body
+	Delay *time.Time
+	// Gets or sets the time to live for the message in the queue.
 	Time2Live *time.Time
 
 	//
@@ -36,8 +37,8 @@ type Envelop struct {
 	MsgStatus    MessageStatus
 }
 
-func EnvelopeWrap(body interface{}) Envelop {
-	return Envelop{
+func EnvelopeWrap(body interface{}) Envelope {
+	return Envelope{
 		Id:            uuid.New(),
 		CorrelationId: uuid.New(),
 		Body:          body,
@@ -46,8 +47,8 @@ func EnvelopeWrap(body interface{}) Envelop {
 	}
 }
 
-func EnvelopeWrap2(body interface{}, partitionKey int32) Envelop {
-	return Envelop{
+func EnvelopeWrap2(body interface{}, partitionKey int32) Envelope {
+	return Envelope{
 		Id:            uuid.New(),
 		CorrelationId: uuid.New(),
 		Body:          body,
@@ -57,8 +58,8 @@ func EnvelopeWrap2(body interface{}, partitionKey int32) Envelop {
 	}
 }
 
-func EnvelopeWrap3(body interface{}, topic string) Envelop {
-	return Envelop{
+func EnvelopeWrap3(body interface{}, topic string) Envelope {
+	return Envelope{
 		Id:            uuid.New(),
 		CorrelationId: uuid.New(),
 		Body:          body,
@@ -67,8 +68,8 @@ func EnvelopeWrap3(body interface{}, topic string) Envelop {
 	}
 }
 
-func EnvelopeWrap4(body interface{}, partitionKey int32, topic string) Envelop {
-	return Envelop{
+func EnvelopeWrap4(body interface{}, partitionKey int32, topic string) Envelope {
+	return Envelope{
 		Id:            uuid.New(),
 		CorrelationId: uuid.New(),
 		Body:          body,
@@ -76,8 +77,4 @@ func EnvelopeWrap4(body interface{}, partitionKey int32, topic string) Envelop {
 		PartitionKey: partitionKey,
 		Topic:        &topic,
 	}
-}
-
-func (e *Envelop) BodyMsg() interface{} {
-	return e.Body
 }

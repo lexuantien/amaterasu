@@ -3,7 +3,7 @@ package v2messaging
 import (
 	"context"
 	"fmt"
-	kafkaBroker "leech-service/infrastructure/kafka.broker"
+	kafkaa "leech-service/cqrs/infrastructure/kafkaa"
 	"os"
 	"sync"
 	"time"
@@ -24,36 +24,36 @@ type IMessageReceiver interface {
 	Complete(context.Context, *kafka.Message) error
 }
 
-type SubscriptionReciever struct {
+type Consumer struct {
 	lock           sync.Mutex
-	client         *kafkaBroker.SubscriptionClient
+	server         *kafkaa.Server
 	messageHandler OnRecieveMessage
 }
 
 // Create.
-//	Initializes a new instance of the SubscriptionReciever.
+//	Initializes a new instance of the Consumer.
 // @param c kafka client.
-func New_SubscriptionReciever(c *kafkaBroker.SubscriptionClient) *SubscriptionReciever {
-	return &SubscriptionReciever{
-		client: c,
+func New_Consumer(c *kafkaa.Server) *Consumer {
+	return &Consumer{
+		server: c,
 	}
 }
 
-func (sr *SubscriptionReciever) Start(ctx context.Context, onReceiveMessage OnRecieveMessage) {
+func (sr *Consumer) Start(ctx context.Context, onReceiveMessage OnRecieveMessage) {
 	sr.lock.Lock()
 	sr.messageHandler = onReceiveMessage
 	go sr.receiveMessages(ctx)
 	sr.lock.Unlock()
 }
 
-func (sr *SubscriptionReciever) receiveMessages(ctx context.Context) {
+func (sr *Consumer) receiveMessages(ctx context.Context) {
 	for {
-		ev := sr.client.Receive(ctx)
+		ev := sr.server.Receive(ctx)
 		switch e := ev.(type) {
 		case kafka.AssignedPartitions:
-			sr.client.Assign(e)
+			sr.server.Assign(e)
 		case kafka.RevokedPartitions:
-			sr.client.Unassign()
+			sr.server.Unassign()
 		case *kafka.Message:
 			sr.messageHandler(ctx, e)
 		case kafka.PartitionEOF:
@@ -67,13 +67,13 @@ func (sr *SubscriptionReciever) receiveMessages(ctx context.Context) {
 	}
 }
 
-func (sr *SubscriptionReciever) Stop(cancelFunc context.CancelFunc) {
+func (sr *Consumer) Stop(cancelFunc context.CancelFunc) {
 	sr.lock.Lock()
 	cancelFunc()
 	sr.messageHandler = nil
 	sr.lock.Unlock()
 }
 
-func (sr *SubscriptionReciever) Complete(ctx context.Context, msg *kafka.Message) error {
-	return sr.client.Complete(ctx, msg)
+func (sr *Consumer) Complete(ctx context.Context, msg *kafka.Message) error {
+	return sr.server.Complete(ctx, msg)
 }
