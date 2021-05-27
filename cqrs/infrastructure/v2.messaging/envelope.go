@@ -1,16 +1,19 @@
 package v2messaging
 
 import (
-	"leech-service/cqrs/infrastructure/uuid"
+	"amaterasu/cqrs/infrastructure/utils"
+	"amaterasu/cqrs/infrastructure/uuid"
+	"reflect"
 	"time"
 )
 
-type MessageStatus uint
+type MessageAction uint
+
+type Message interface{}
 
 const (
-	UPDATE MessageStatus = iota
-	INSERT
-	DELETE
+	EVENT MessageAction = iota
+	COMMAND
 )
 
 // Provides the envelope for an object that will be sent to a bus.
@@ -34,47 +37,62 @@ type Envelope struct {
 	//
 	PartitionKey int32
 	Topic        *string
-	MsgStatus    MessageStatus
+	MsgStatus    *uint
+
+	//
+
+	MsgType   string
+	MsgAction MessageAction
 }
 
-func EnvelopeWrap(body interface{}) Envelope {
+func EnvelopeWrap(body interface{}, msgStatus *uint, msgAction MessageAction) Envelope {
 	return Envelope{
 		Id:            uuid.New(),
 		CorrelationId: uuid.New(),
 		Body:          body,
 		PartitionKey:  -1,
 		Topic:         nil,
+		MsgStatus:     msgStatus,
+		MsgAction:     msgAction,
+		MsgType:       utils.GetTypeName2(reflect.TypeOf(body)),
 	}
 }
 
-func EnvelopeWrap2(body interface{}, partitionKey int32) Envelope {
+func EnvelopeWrap2(body interface{}, msgStatus *uint, msgAction MessageAction, partitionKey int32) Envelope {
 	return Envelope{
 		Id:            uuid.New(),
 		CorrelationId: uuid.New(),
 		Body:          body,
-
-		PartitionKey: partitionKey,
-		Topic:        nil,
+		PartitionKey:  partitionKey,
+		Topic:         nil,
+		MsgStatus:     msgStatus,
+		MsgAction:     msgAction,
+		MsgType:       utils.GetTypeName2(reflect.TypeOf(body)),
 	}
 }
 
-func EnvelopeWrap3(body interface{}, topic string) Envelope {
+func EnvelopeWrap3(body interface{}, msgStatus *uint, msgAction MessageAction, topic string) Envelope {
 	return Envelope{
 		Id:            uuid.New(),
 		CorrelationId: uuid.New(),
 		Body:          body,
 		PartitionKey:  -1,
 		Topic:         &topic,
+		MsgStatus:     msgStatus,
+		MsgAction:     msgAction,
+		MsgType:       utils.GetTypeName2(reflect.TypeOf(body)),
 	}
 }
 
-func EnvelopeWrap4(body interface{}, partitionKey int32, topic string) Envelope {
+func EnvelopeWrap4(body interface{}, msgStatus *uint, msgAction MessageAction, partitionKey int32, topic string) Envelope {
 	return Envelope{
 		Id:            uuid.New(),
 		CorrelationId: uuid.New(),
 		Body:          body,
-
-		PartitionKey: partitionKey,
-		Topic:        &topic,
+		PartitionKey:  partitionKey,
+		Topic:         &topic,
+		MsgStatus:     msgStatus,
+		MsgAction:     msgAction,
+		MsgType:       utils.GetTypeName2(reflect.TypeOf(body)),
 	}
 }

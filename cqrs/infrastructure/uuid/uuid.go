@@ -13,6 +13,10 @@ func New() UUID {
 	return UUID(uuid.New())
 }
 
+func NewString() string {
+	return uuid.NewString()
+}
+
 // Parse parses a UUID from a string, or returns an error.
 func Parse(s string) (UUID, error) {
 	id, err := uuid.Parse(s)

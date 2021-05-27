@@ -1,10 +1,9 @@
 package handling
 
 import (
+	"amaterasu/cqrs/infrastructure/serialization"
+	v2messaging "amaterasu/cqrs/infrastructure/v2.messaging"
 	"context"
-	"fmt"
-	"leech-service/cqrs/infrastructure/serialization"
-	v2messaging "leech-service/cqrs/infrastructure/v2.messaging"
 	"sync"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
@@ -13,7 +12,7 @@ import (
 type EventProcessor struct {
 
 	//
-	receiver   v2messaging.IMessageReceiver
+	consumer   v2messaging.IMessageConsumer
 	serializer serialization.ISerializer
 
 	//
@@ -27,25 +26,22 @@ type EventProcessor struct {
 	dispatcher *EventDispatcher
 }
 
-func New_EventProcessor(r v2messaging.IMessageReceiver, s serialization.ISerializer) *EventProcessor {
+func New_EventProcessor(r v2messaging.IMessageConsumer, s serialization.ISerializer) *EventProcessor {
 	return &EventProcessor{
-		receiver:   r,
+		consumer:   r,
 		serializer: s,
 		dispatcher: New_EventDispatcher(),
 	}
 }
 
 // Registers the specified event handler.
-func (cp *EventProcessor) Register(eventHandler v2messaging.IEventHandler, events ...interface{}) error {
-	return cp.dispatcher.Register(eventHandler, events...)
+func (cp *EventProcessor) Register(eventHandler v2messaging.IEventHandler) error {
+	return cp.dispatcher.Register(eventHandler)
 }
 
 // Processes the message by calling the registered handler.
-func (cp *EventProcessor) processMessage(event interface{}) bool {
-	if event != nil {
-		return cp.dispatcher.DispatchMessage(event)
-	}
-	return false
+func (cp *EventProcessor) processMessage(event v2messaging.Envelope) bool {
+	return cp.dispatcher.DispatchMessage(event) == nil
 }
 
 func (cp *EventProcessor) Start() {
@@ -54,7 +50,7 @@ func (cp *EventProcessor) Start() {
 	if !cp.started {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		cp.cancelFunc = cancelFunc
-		cp.receiver.Start(ctx, cp.onMessageReceived)
+		cp.consumer.Start(ctx, cp.onMessageReceived)
 		cp.started = true
 	}
 	cp.lockObject.Unlock()
@@ -63,38 +59,13 @@ func (cp *EventProcessor) Start() {
 func (cp *EventProcessor) Stop() {
 	cp.lockObject.Lock()
 	if cp.started {
-		cp.receiver.Stop(cp.cancelFunc)
+		cp.consumer.Stop(cp.cancelFunc)
 		cp.started = false
 	}
 	cp.lockObject.Unlock()
 }
 
 // recieve message from message queue
-func (cp *EventProcessor) onMessageReceived(ctx context.Context, message *kafka.Message) {
-
-	cmdClassType, _ := cp.serializer.Deserialize(message.Headers[0].Value, "")
-
-	msg, _ := cp.dispatcher.GetCommandType(cmdClassType.(string))
-
-	msg, _ = cp.serializer.Deserialize(message.Value, msg)
-
-	ok := cp.processMessage(msg)
-
-	// commit msg
-	if ok {
-		loop := 0
-		for {
-			if err := cp.receiver.Complete(ctx, message); err != nil {
-				fmt.Println(err)
-				if loop == 3 {
-					// TODO use CB to handle error
-					// TODO add to dead letter to commit again
-					return
-				}
-				loop++
-			} else {
-				break
-			}
-		}
-	}
+func (cp *EventProcessor) onMessageReceived(ctx context.Context, message *kafka.Message) error {
+	return OnMessageReceivedHandler(ctx, message, cp.processMessage, cp.consumer.Complete)
 }

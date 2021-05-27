@@ -1,9 +1,7 @@
 package v2messaging
 
-type IEventHandler interface {
-	Handle(interface{}) error
-}
+type IEventHandler interface{}
 
 type IEventHandlerRegistry interface {
-	Register(IEventHandler, ...interface{}) error
+	Register(IEventHandler) error
 }

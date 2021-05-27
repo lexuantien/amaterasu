@@ -1,13 +1,13 @@
 package v2messaging
 
 import (
+	kafkaa "amaterasu/cqrs/infrastructure/kafkaa"
 	"context"
-	kafkaa "leech-service/cqrs/infrastructure/kafkaa"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
-type IMessageSender interface {
+type IMessageProducer interface {
 	Send(ctx context.Context, message *kafka.Message) error // send to message queue
 }
 

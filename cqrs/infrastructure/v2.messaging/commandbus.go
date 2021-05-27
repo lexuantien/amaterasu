@@ -1,10 +1,9 @@
 package v2messaging
 
 import (
+	"amaterasu/cqrs/infrastructure/serialization"
+	"amaterasu/cqrs/infrastructure/uuid"
 	"context"
-	"leech-service/cqrs/infrastructure/serialization"
-	"leech-service/cqrs/infrastructure/utils"
-	"leech-service/cqrs/infrastructure/uuid"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
@@ -15,13 +14,13 @@ type ICommandBus interface {
 }
 
 type CommandBus struct {
-	sender     IMessageSender
+	producer   IMessageProducer
 	serializer serialization.ISerializer
 }
 
-func New_CommandBus(sen IMessageSender, ser serialization.ISerializer) *CommandBus {
+func New_CommandBus(producer IMessageProducer, ser serialization.ISerializer) *CommandBus {
 	return &CommandBus{
-		sender:     sen,
+		producer:   producer,
 		serializer: ser,
 	}
 }
@@ -29,7 +28,7 @@ func New_CommandBus(sen IMessageSender, ser serialization.ISerializer) *CommandB
 func (bus CommandBus) Send(ctx context.Context, command Envelope) error {
 	message := bus.buildMessage(command)
 
-	return bus.sender.Send(ctx, message) // Send to kafka
+	return bus.producer.Send(ctx, message) // Send to kafka
 }
 
 func (bus CommandBus) Sends(ctx context.Context, commands ...Envelope) error {
@@ -46,24 +45,17 @@ func (bus CommandBus) Sends(ctx context.Context, commands ...Envelope) error {
 func (bus CommandBus) buildMessage(command Envelope) *kafka.Message {
 
 	message := &kafka.Message{}
-	var uid uuid.UUID
+
+	var uid uuid.UUID = command.Id
 	if command.Id == uuid.Nil {
 		uid = uuid.New()
 	}
 
-	idByte, _ := bus.serializer.Serialize(uid)
-	message.Key = idByte
+	idBytes, _ := bus.serializer.Serialize(uid)
+	message.Key = idBytes
 
-	val, _ := bus.serializer.Serialize(command.Body)
-	message.Value = val
-
-	_, name := utils.GetTypeName(command.Body)
-	cmdType, _ := bus.serializer.Serialize(name)
-
-	message.Headers = append(message.Headers, kafka.Header{
-		Key:   "cmd-type",
-		Value: cmdType,
-	})
+	cmdBytes, _ := bus.serializer.Serialize(command)
+	message.Value = cmdBytes
 
 	// TODO handle correlationId
 	// TODO handle time2live message

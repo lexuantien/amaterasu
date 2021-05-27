@@ -1,8 +1,8 @@
 package handling
 
 import (
+	v2messaging "amaterasu/cqrs/infrastructure/v2.messaging"
 	"context"
-	v2messaging "leech-service/cqrs/infrastructure/v2.messaging"
 )
 
 /*
@@ -27,8 +27,8 @@ func New_SyncCommandBus(bus v2messaging.CommandBus) {
 	syncCb.dispatcher = New_CommandDispatcher()
 }
 
-func (scb SyncCommandBus) Register(commandHandler v2messaging.ICommandHandler, commands ...interface{}) error {
-	return scb.dispatcher.Register(commandHandler, commands)
+func (scb SyncCommandBus) Register(commandHandler v2messaging.ICommandHandler) error {
+	return scb.dispatcher.Register(commandHandler)
 }
 
 func (scb SyncCommandBus) Send(ctx context.Context, command v2messaging.Envelope) error {
@@ -60,10 +60,6 @@ func (scb SyncCommandBus) Sends(ctx context.Context, commands ...v2messaging.Env
 }
 
 func (scb SyncCommandBus) doSend(command v2messaging.Envelope) bool {
-	handled := false
-
 	// TODO trace log
-	handled = scb.dispatcher.ProcessMessage(command)
-
-	return handled
+	return scb.dispatcher.ProcessMessage(command) == nil
 }

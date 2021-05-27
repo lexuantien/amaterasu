@@ -1,10 +1,9 @@
 package handling
 
 import (
+	"amaterasu/cqrs/infrastructure/serialization"
+	v2messaging "amaterasu/cqrs/infrastructure/v2.messaging"
 	"context"
-	"fmt"
-	"leech-service/cqrs/infrastructure/serialization"
-	v2messaging "leech-service/cqrs/infrastructure/v2.messaging"
 	"sync"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
@@ -13,15 +12,15 @@ import (
 // Processes incoming commands from the bus and routes them to the appropriate
 type CommandProcessor struct {
 
-	// kafka subscriber
-	receiver v2messaging.IMessageReceiver
+	// kafka consumer
+	consumer v2messaging.IMessageConsumer
 	// serialize kafka message to json - grpc - html ...
 	serializer serialization.ISerializer
 
 	// ignore the second request
 	started bool
 
-	// uses a peek/lock technique to retrieve a message from a subscription
+	// uses a peek/lock technique to retrieve a message from a consumer
 	lockObject sync.Mutex
 	cancelFunc context.CancelFunc
 
@@ -33,71 +32,48 @@ type CommandProcessor struct {
 // Initializes a new instance of the CommandProcessor
 // @param r Kafka receive maeesage
 // @param s The serializer to use for the message body.
-func New_CommandProcessor(r v2messaging.IMessageReceiver, s serialization.ISerializer) *CommandProcessor {
+func New_CommandProcessor(r v2messaging.IMessageConsumer, s serialization.ISerializer) *CommandProcessor {
 	return &CommandProcessor{
-		receiver:   r,
+		consumer:   r,
 		serializer: s,
 		dispatcher: New_CommandDispatcher(),
 	}
 }
 
 // Registers the specified command handler.
-func (cp *CommandProcessor) Register(commandHandler v2messaging.ICommandHandler, commands ...interface{}) error {
-	return cp.dispatcher.Register(commandHandler, commands...)
+func (cp *CommandProcessor) Register(commandHandler v2messaging.ICommandHandler) error {
+	return cp.dispatcher.Register(commandHandler)
 }
 
 // Processes the message by calling the registered handler.
-func (cp *CommandProcessor) processMessage(command interface{}) bool {
-	return cp.dispatcher.ProcessMessage(command)
+func (cp *CommandProcessor) processMessage(msg v2messaging.Envelope) bool {
+	return cp.dispatcher.ProcessMessage(msg) == nil
 }
 
+// start consume message in message queue
 func (cp *CommandProcessor) Start() {
 	// lock
 	cp.lockObject.Lock()
 	if !cp.started {
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		cp.cancelFunc = cancelFunc
-		cp.receiver.Start(ctx, cp.onMessageReceived)
+		cp.consumer.Start(ctx, cp.onMessageReceived)
 		cp.started = true
 	}
 	cp.lockObject.Unlock()
 }
 
+// stop consume message in message queue
 func (cp *CommandProcessor) Stop() {
 	cp.lockObject.Lock()
 	if cp.started {
-		cp.receiver.Stop(cp.cancelFunc)
+		cp.consumer.Stop(cp.cancelFunc)
 		cp.started = false
 	}
 	cp.lockObject.Unlock()
 }
 
 // recieve message from message queue
-func (cp *CommandProcessor) onMessageReceived(ctx context.Context, message *kafka.Message) {
-
-	cmdClassType, _ := cp.serializer.Deserialize(message.Headers[0].Value, "")
-
-	msg, _ := cp.dispatcher.GetCommandType(cmdClassType.(string))
-
-	msg, _ = cp.serializer.Deserialize(message.Value, msg)
-
-	ok := cp.processMessage(msg)
-
-	// commit msg
-	if ok {
-		loop := 0
-		for {
-			if err := cp.receiver.Complete(ctx, message); err != nil {
-				fmt.Println(err)
-				if loop == 3 {
-					// TODO use CB to handle error
-					// TODO add to dead letter to commit again
-					return
-				}
-				loop++
-			} else {
-				break
-			}
-		}
-	}
+func (cp *CommandProcessor) onMessageReceived(ctx context.Context, message *kafka.Message) error {
+	return OnMessageReceivedHandler(ctx, message, cp.processMessage, cp.consumer.Complete)
 }
