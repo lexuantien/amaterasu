@@ -30,19 +30,35 @@ type Foo1 struct {
 	Description string
 }
 
+func (f Foo1) Id() string {
+	return f.ProductId
+}
+
 type Foo2 struct {
 	OrderId string
 }
 
+func (f Foo2) Id() string {
+	return f.OrderId
+}
+
 type Foo3 struct {
-	Id     string
+	FId    string
 	Gender bool
 }
 
+func (f Foo3) Id() string {
+	return f.FId
+}
+
 type Foo4 struct {
-	Id string
-	T  string
-	N  bool
+	FId string
+	T   string
+	N   bool
+}
+
+func (f Foo4) Id() string {
+	return f.FId
 }
 
 //! command handlers

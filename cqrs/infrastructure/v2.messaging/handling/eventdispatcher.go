@@ -101,7 +101,7 @@ func (cd *EventDispatcher) DispatchMessage(msg v2messaging.Envelope) error {
 		return errors.New("not found event type")
 	}
 
-	event := reflect.New(entry).Interface().(v2messaging.Message)
+	event := reflect.New(entry).Interface().(v2messaging.IEvent)
 	config := &mapstructure.DecoderConfig{
 		DecodeHook:       utils.MapTimeFromJSON,
 		TagName:          "json",

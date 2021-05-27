@@ -137,7 +137,7 @@ func (cd *CommandDispatcher) ProcessMessage(msg v2messaging.Envelope) error {
 		return errors.New("not found command type")
 	}
 
-	command := reflect.New(entry).Interface().(v2messaging.Message)
+	command := reflect.New(entry).Interface().(v2messaging.ICommand)
 	config := &mapstructure.DecoderConfig{
 		DecodeHook:       utils.MapTimeFromJSON,
 		TagName:          "json",

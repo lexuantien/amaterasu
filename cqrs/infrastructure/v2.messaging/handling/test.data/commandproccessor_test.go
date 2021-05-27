@@ -40,14 +40,14 @@ func Test_send_command_to_kafka_then_success(t *testing.T) {
 
 	ok = bus.Send(context.Background(), v2messaging.EnvelopeWrap(Foo3{
 		Gender: true,
-		Id:     uuid.NewString(),
+		FId:    uuid.NewString(),
 	}, nil, v2messaging.COMMAND))
 	fmt.Println(ok)
 
 	ok = bus.Send(context.Background(), v2messaging.EnvelopeWrap(Foo4{
-		T:  "Ronaldo",
-		N:  false,
-		Id: uuid.NewString(),
+		T:   "Ronaldo",
+		N:   false,
+		FId: uuid.NewString(),
 	}, nil, v2messaging.COMMAND))
 	fmt.Println(ok)
 
