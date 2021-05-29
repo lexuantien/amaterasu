@@ -7,5 +7,6 @@ type IEventHandlerRegistry interface {
 }
 
 type IEvent interface {
-	SourceId() string
+	SetSourceID(string)
+	GetSourceID() string
 }
