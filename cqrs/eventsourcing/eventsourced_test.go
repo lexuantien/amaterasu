@@ -38,7 +38,7 @@ type OrderUpdated struct {
 
 func Test_sth(t *testing.T) {
 	o := &Order{
-		EventSourced: New_EventSourced(),
+		EventSourced: New_EventSourced(2, "order/events", "order"),
 	}
 	o.AutoMappingHandles(o)
 
@@ -47,13 +47,14 @@ func Test_sth(t *testing.T) {
 
 func Test_db(t *testing.T) {
 	o := &Order{
-		EventSourced: New_EventSourced(),
+		EventSourced: New_EventSourced(1, "order/events", "order"),
 	}
+
 	o.AutoMappingHandles(o)
 	o.Update(&OrderPlaced{AccessCode: "1234"})
 	o.Update(&OrderUpdated{Seats: 12})
 
 	context := New_EventSourcedORM()
-	//	context.Create()
+	context.Create()
 	context.Save(o, "1")
 }

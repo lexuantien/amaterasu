@@ -68,6 +68,8 @@ func (orm EventSourcedORM) Save(es IEventSourced, correlationId string) {
 			Payload:   ePayloadByte,
 			Topic:     es.GetTopic(),
 			Partition: es.GetPartition(),
+			Stream:    es.GetStream(),
+			Status:    0,
 		}
 		events = append(events, eventData)
 	}

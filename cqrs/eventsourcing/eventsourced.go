@@ -2,8 +2,8 @@ package eventsourcing
 
 import (
 	"amaterasu/cqrs/infrastructure/utils"
+	"amaterasu/cqrs/infrastructure/uuid"
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 )
@@ -20,6 +20,7 @@ type (
 		GetTopic() string
 		GetPartition() int
 		GetType(string) reflect.Type
+		GetStream() string
 	}
 
 	EventSourced struct {
@@ -30,13 +31,18 @@ type (
 		id            string
 		topic         string
 		partition     int
+		stream        string
 	}
 )
 
-func New_EventSourced() EventSourced {
+func New_EventSourced(partition int, topic, stream string) EventSourced {
 	return EventSourced{
 		handlers:   make(map[reflect.Type]func(IVersionedEvent) error),
 		eventTypes: make(map[string]reflect.Type),
+		topic:      topic,
+		partition:  partition,
+		id:         uuid.NewString(),
+		stream:     stream,
 	}
 }
 
@@ -92,11 +98,6 @@ func (es *EventSourced) AutoMappingHandles(aggreate interface{}) error {
 }
 
 func (es *EventSourced) Update(e IVersionedEvent) {
-	// e.SourceId = this.Id;
-	// e.Version = this.version + 1;
-	// this.handlers[e.GetType()].Invoke(e);
-	// this.version = e.Version;
-	// this.pendingEvents.Add(e);
 	e.SetSourceID(es.id)
 	e.SetVersion(es.version + 1)
 	if onEventFunc, found := es.handlers[reflect.TypeOf(e).Elem()]; found {
@@ -104,7 +105,6 @@ func (es *EventSourced) Update(e IVersionedEvent) {
 	}
 	es.version = e.GetVersion()
 	es.pendingEvents = append(es.pendingEvents, e)
-	fmt.Println(es.pendingEvents[0])
 }
 
 func (es *EventSourced) LoadFrom(pastEvents []IVersionedEvent) {
@@ -135,4 +135,7 @@ func (es *EventSourced) GetPartition() int {
 
 func (es *EventSourced) GetType(t string) reflect.Type {
 	return es.eventTypes[t]
+}
+func (es *EventSourced) GetStream() string {
+	return es.stream
 }
