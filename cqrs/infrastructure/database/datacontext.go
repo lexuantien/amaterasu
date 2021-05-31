@@ -3,6 +3,7 @@ package database
 import (
 	"amaterasu/cqrs/infrastructure/messaging"
 	"amaterasu/utils"
+	"context"
 	"math/rand"
 	"reflect"
 
@@ -24,8 +25,9 @@ type (
 	}
 )
 
-func New_DataContext(table string, agg IAggregateRoot, bus messaging.IEventBus) *DataContext {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:3306)/" + table))
+func New_DataContext(agg interface{}, bus messaging.IEventBus) *DataContext {
+	// todo split to another class
+	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:3306)/test_db"))
 	if err != nil {
 		panic(err)
 	}
@@ -39,38 +41,44 @@ func New_DataContext(table string, agg IAggregateRoot, bus messaging.IEventBus) 
 }
 
 func (context *DataContext) Find(id string) IAggregateRoot {
-	agg := reflect.New(context.aggType).Interface().(IAggregateRoot)
-	err := context.db.Where("id = ?", id).First(&agg).Error
-	if err != nil {
-		panic(err)
+
+	agg := reflect.New(context.aggType.Elem()).Interface().(IAggregateRoot)
+
+	tx := context.db.Model(agg).Where("id=?", id).First(agg)
+	if tx.Error != nil {
+		panic(tx.Error)
 	}
+
 	return agg
 }
 
-func (context *DataContext) Save(aggreate IAggregateRoot) {
+func (dbContext *DataContext) Save(aggreate IAggregateRoot) {
 	// aggreate.GetID()
 
-	agg := reflect.New(context.aggType).Interface().(IAggregateRoot)
-	context.db.Where(aggreate).First(&agg)
+	// agg := reflect.New(dbContext.aggType).Interface().(IAggregateRoot)
+	// db := dbContext.db.Model(aggreate).Where(aggreate).First(&agg)
+	// fmt.Println(db.RowsAffected)
 
-	if agg != nil {
-		return
-	}
+	// if db.RowsAffected != 0 {
+	// 	return
+	// }
+
 	// Can't have transactions across storage and message bus.
-	err := context.db.Save(aggreate).Error
+	err := dbContext.db.Save(aggreate).Error
 	if err != nil {
 		panic(err)
 	}
 
-	if val, ok := reflect.TypeOf(aggreate).(messaging.IEventPublisher); ok {
+	// if contains some event need to publish
+	// todo store to `undispatch event` table then listener it to publish
+	if val, ok := aggreate.(messaging.IEventPublisher); ok && val.GetEvents() != nil {
 		envelopes := make([]messaging.Envelope, len(val.GetEvents()))
-
 		// all event need 1 partition
 		// random choose partition key
 		partititonKey := rand.Intn(5)
 		for i, e := range val.GetEvents() {
 			envelopes[i] = messaging.EnvelopeWrap2(e, int32(partititonKey), messaging.EVENT)
 		}
-		context.bus.Publishes(envelopes...)
+		dbContext.bus.Publishes(context.Background(), envelopes...)
 	}
 }

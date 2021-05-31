@@ -9,8 +9,8 @@ import (
 )
 
 type IEventBus interface {
-	Publish(event Envelope) (bool, error)
-	Publishes(events ...Envelope) (bool, error)
+	Publish(ctx context.Context, event Envelope) error
+	Publishes(ctx context.Context, events ...Envelope) error
 }
 
 // An event bus that sends serialized object payloads through IMessageProducer
