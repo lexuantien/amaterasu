@@ -36,7 +36,7 @@ type Consumer struct {
 }
 
 // Create.
-//	Initializes a new instance of the Consumer.
+// Initializes a new instance of the Consumer.
 // @param c kafka client.
 func New_Consumer(c *kafkaa.Server) *Consumer {
 	return &Consumer{

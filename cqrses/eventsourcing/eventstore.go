@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"time"
 
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -40,33 +38,6 @@ type (
 	}
 )
 
-// todo split to another class
-func MysqlConnPool() *gorm.DB {
-
-	// create connection string to mysql
-	// todo make class handle many database
-	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:3306)/book_db"))
-
-	// just panic error
-	if err != nil {
-		panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
-	}
-
-	// config connection pool
-	mysqlDB, _ := db.DB()
-
-	// SetMaxIdleConns sets the maximum number of connections in the idle connection pool.
-	mysqlDB.SetMaxIdleConns(10)
-
-	// SetMaxOpenConns sets the maximum number of open connections to the database.
-	mysqlDB.SetMaxOpenConns(100)
-
-	// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
-	mysqlDB.SetConnMaxLifetime(time.Hour)
-
-	return db
-}
-
 // Create an orm to handle save event to wvent store
 // @param db connection
 // @param A entity (aggreate) use this orm
@@ -85,7 +56,7 @@ func (store *EventStore) CreateEventStoreTable() {
 // golang doesn't support generic type until `golang ver 1.18` at `01/01/2022`
 // map entity to ease handler
 func (store *EventStore) mapping(agg IEventSourced) {
-	store.entityType, store.stream = utils.GetTypeName(agg)
+	store.entityType, store.stream = utils.GetObjType(agg)
 }
 
 func (store *EventStore) Save(entity IEventSourced) error {
@@ -94,11 +65,11 @@ func (store *EventStore) Save(entity IEventSourced) error {
 
 	for i, e := range entity.Events() {
 
-		eTypeName := utils.GetTypeName2(reflect.TypeOf(e))
+		eTypeName := utils.GetObjType2(reflect.TypeOf(e))
 		ePayloadByte, _ := json.Marshal(e)
 
 		eventData := EventData{
-			SourceId:  e.GetSourceID(),
+			SourceId:  e.GetSourceId(),
 			Version:   e.GetVersion(),
 			Type:      eTypeName,
 			Payload:   ePayloadByte,

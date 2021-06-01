@@ -43,7 +43,7 @@ func New_EventSourced(partition int, topic string) EventSourced {
 		eventTypes: make(map[string]reflect.Type),
 		topic:      topic,
 		partition:  partition,
-		id:         utils.NewString(),
+		id:         utils.NewUuidString(),
 	}
 }
 
@@ -91,7 +91,7 @@ func (es *EventSourced) AutoMappingHandles(aggreate interface{}) error {
 		}
 
 		es.handlers[eventType] = onEventFunc
-		eventTypeName := utils.GetTypeName2(eventType)
+		eventTypeName := utils.GetObjType2(eventType)
 		es.eventTypes[eventTypeName] = eventType
 	}
 
@@ -99,7 +99,7 @@ func (es *EventSourced) AutoMappingHandles(aggreate interface{}) error {
 }
 
 func (es *EventSourced) Update(e IVersionedEvent) {
-	e.SetSourceID(es.id)
+	e.SetSourceId(es.id)
 	e.SetVersion(es.version + 1)
 	if onEventFunc, found := es.handlers[reflect.TypeOf(e).Elem()]; found {
 		onEventFunc(e)

@@ -4,11 +4,10 @@ import (
 	"reflect"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
-func GetTypeName(source interface{}) (reflect.Type, string) {
+// get object type and type name
+func GetObjType(source interface{}) (reflect.Type, string) {
 	rawType := reflect.TypeOf(source)
 
 	// source is a pointer, convert to its value
@@ -23,7 +22,8 @@ func GetTypeName(source interface{}) (reflect.Type, string) {
 	return rawType, parts[1]
 }
 
-func GetTypeName2(t reflect.Type) string {
+// get obj type name
+func GetObjType2(t reflect.Type) string {
 	segments := strings.Split(t.String(), ".")
 	return segments[len(segments)-1]
 }
@@ -37,30 +37,4 @@ func MapTimeFromJSON(f reflect.Type, t reflect.Type, data interface{}) (interfac
 	}
 
 	return data, nil
-}
-
-// UUID is an alias type for github.com/google/uuid.UUID
-type UUID = uuid.UUID
-
-// Nil is an empty UUID.
-var Nil = UUID(uuid.Nil)
-
-// New creates a new UUID.
-func New() UUID {
-	return UUID(uuid.New())
-}
-
-func NewString() string {
-	return uuid.NewString()
-}
-
-// Parse parses a UUID from a string, or returns an error.
-func Parse(s string) (UUID, error) {
-	id, err := uuid.Parse(s)
-	return UUID(id), err
-}
-
-// MustParse parses a UUID from a string, or panics.
-func MustParse(s string) UUID {
-	return UUID(uuid.MustParse(s))
 }

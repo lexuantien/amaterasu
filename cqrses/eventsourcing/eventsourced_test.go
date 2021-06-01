@@ -1,6 +1,7 @@
 package eventsourcing
 
 import (
+	"amaterasu/utils"
 	"fmt"
 	"testing"
 )
@@ -53,7 +54,7 @@ func Test_db(t *testing.T) {
 	o.AutoMappingHandles(o)
 	o.Update(&OrderPlaced{AccessCode: "1234"})
 	o.Update(&OrderUpdated{Seats: 12})
-	mysql := MysqlConnPool()
+	mysql := utils.MysqlConnPool("root:root@tcp(127.0.0.1:3306)/book_db")
 	orm := New_EventStore(mysql, &Order{})
 	// orm.CreateEventStoreTable()
 	// orm.Save(o)

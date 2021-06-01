@@ -2,12 +2,11 @@ package handling
 
 import (
 	"amaterasu/cqrs/infrastructure/messaging"
+	"amaterasu/cqrs/infrastructure/serialization"
 	"amaterasu/utils"
 	"errors"
 	"reflect"
 	"strings"
-
-	"github.com/mitchellh/mapstructure"
 )
 
 type eventHandlerFunc func(msg messaging.Message) error
@@ -71,7 +70,7 @@ func (cd *EventDispatcher) Register(eventHandler messaging.ICommandHandler) erro
 
 		// 1 because param in golang start at 1, 0 is struct type
 		eventType := handlerMethod.Type.In(1) // get event type
-		eventTypeName := utils.GetTypeName2(eventType)
+		eventTypeName := utils.GetObjType2(eventType)
 		if _, ok := cd.eventHandlers[eventType]; !ok {
 			cd.eventHandlers[eventType] = make(map[messaging.IEventHandler]struct{})
 			cd.eventTypes[eventTypeName] = eventType
@@ -88,7 +87,7 @@ func (cd *EventDispatcher) Register(eventHandler messaging.ICommandHandler) erro
 }
 
 // Processes the message by calling the registered handler.
-func (cd *EventDispatcher) DispatchMessage(msg messaging.Envelope) error {
+func (cd *EventDispatcher) DispatchMessage(msg messaging.Envelope, serializer serialization.ISerializer) error {
 	handlerFuncArr, found := cd.eventHandlerFuncs[msg.MsgType]
 
 	if !found {
@@ -101,26 +100,13 @@ func (cd *EventDispatcher) DispatchMessage(msg messaging.Envelope) error {
 		return errors.New("not found event type")
 	}
 
-	event := reflect.New(entry).Interface().(messaging.IEvent)
-	config := &mapstructure.DecoderConfig{
-		DecodeHook:       utils.MapTimeFromJSON,
-		TagName:          "json",
-		Result:           event,
-		WeaklyTypedInput: true,
-	}
-
-	decoder, errDecoder := mapstructure.NewDecoder(config)
-	if errDecoder != nil {
-		return errors.New("config mapstructure fail")
-	}
-
-	errDecode := decoder.Decode(msg.Body)
-	if errDecode != nil {
-		return errors.New("decode message fail")
+	event, err := serializer.Deserialize(msg.Body, entry)
+	if err != nil {
+		return err
 	}
 
 	for _, handlerFunc := range handlerFuncArr {
-		errHandlerFunc := handlerFunc(event)
+		errHandlerFunc := handlerFunc(event.(messaging.IEvent))
 		if errHandlerFunc != nil {
 			return errHandlerFunc
 		}

@@ -3,22 +3,12 @@ package database
 import (
 	"amaterasu/cqrs/infrastructure/messaging"
 	"amaterasu/cqrs/infrastructure/serialization"
-	"amaterasu/kafkaa"
 	"amaterasu/utils"
 	"testing"
 )
 
 var (
-	kafkaConfig = kafkaa.KafkaConfig{
-		Scr: &kafkaa.Scram{
-			Username: "ni61pj1b",
-			Password: "mWl_TWtiOPUKF4hRXVXPfULsKSoMzT0l",
-			Al256:    true,
-		},
-		Brokers:   "glider-01.srvs.cloudkafka.com:9094,glider-02.srvs.cloudkafka.com:9094,glider-03.srvs.cloudkafka.com:9094",
-		Topic:     "ni61pj1b--topic-A",
-		ConfigMap: make(map[string]interface{}),
-	}
+	orm = utils.MysqlConnPool("root:root@tcp(127.0.0.1:3306)/test_db")
 )
 
 type (
@@ -53,7 +43,7 @@ type (
 )
 
 func (test *InfoAggregateRoot) AddEvent(event messaging.IEvent) {
-	event.SetSourceID(test.ID)
+	event.SetSourceId(test.Id)
 	test.Events = append(test.Events, event)
 }
 
@@ -64,36 +54,29 @@ func (test *InfoAggregateRoot) AddEvent(event messaging.IEvent) {
 
 func Test_save_aggreate(t *testing.T) {
 	// create event bus
-	kafkaConfig := kafkaa.New_kafkaa(kafkaConfig)
-	sender := messaging.New_Producer(*kafkaConfig)
 	serializer := serialization.New_JsonSerializer()
-	bus := messaging.New_EventBus(sender, serializer)
-
 	// create datacontex to save aggreate
-	testDbContext := New_DataContext(&InfoAggregateRoot2{}, bus)
-	testDbContext.db.AutoMigrate(InfoAggregateRoot2{})
-
+	testDbContext := New_DataContext(orm, &InfoAggregateRoot2{}, "ni61pj1b--topic-A", 5, serializer)
+	testDbContext.orm.AutoMigrate(InfoAggregateRoot2{})  // for testing purpose
+	testDbContext.orm.AutoMigrate(UndispatchedMessage{}) // for testing purpose
 	// create aggreate root
 	agg := &InfoAggregateRoot2{}
-	agg.ID = utils.NewString()
+	agg.Id = utils.NewUuidString()
 
 	// save to database
 	testDbContext.Save(agg)
 }
 
 func Test_find_aggreate_then_update_data(t *testing.T) {
-	// create event bus
-	kafkaConfig := kafkaa.New_kafkaa(kafkaConfig)
-	sender := messaging.New_Producer(*kafkaConfig)
 	serializer := serialization.New_JsonSerializer()
-	bus := messaging.New_EventBus(sender, serializer)
-
 	// create datacontex to save aggreate
-	testDbContext := New_DataContext(&InfoAggregateRoot{}, bus)
-	testDbContext.db.AutoMigrate(InfoAggregateRoot{}) // for testing purpose
+	testDbContext := New_DataContext(orm, &InfoAggregateRoot{}, "ni61pj1b--topic-A", 5, serializer)
 
-	agg := testDbContext.Find("type id here").(*InfoAggregateRoot)
+	testDbContext.orm.AutoMigrate(InfoAggregateRoot{}) // for testing purpose
 
+	aggv, _ := testDbContext.Find("type id here")
+
+	agg := aggv.(*InfoAggregateRoot)
 	agg.Name = "Tien"
 	agg.Sex = "male"
 	agg.Status = "single"
@@ -104,18 +87,15 @@ func Test_find_aggreate_then_update_data(t *testing.T) {
 func Test_save_aggreate_then_send_events(t *testing.T) {
 
 	// create event bus
-	kafkaConfig := kafkaa.New_kafkaa(kafkaConfig)
-	sender := messaging.New_Producer(*kafkaConfig)
 	serializer := serialization.New_JsonSerializer()
-	bus := messaging.New_EventBus(sender, serializer)
-
 	// create datacontex to save aggreate
-	testDbContext := New_DataContext(&InfoAggregateRoot{}, bus)
-	testDbContext.db.AutoMigrate(InfoAggregateRoot{})
+	testDbContext := New_DataContext(orm, &InfoAggregateRoot{}, "ni61pj1b--topic-A", 5, serializer)
+	testDbContext.orm.AutoMigrate(InfoAggregateRoot{})   // for testing purpose
+	testDbContext.orm.AutoMigrate(UndispatchedMessage{}) // for testing purpose
 
 	// create aggreate root
 	agg := &InfoAggregateRoot{}
-	agg.ID = utils.NewString()
+	agg.Id = utils.NewUuidString()
 
 	// create events
 	e1 := &NameChanged{}

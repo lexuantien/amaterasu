@@ -47,7 +47,7 @@ func (bus EventBus) buildMessage(event Envelope) *kafka.Message {
 
 	var uid string = event.Id
 	if event.Id == "" {
-		uid = utils.NewString()
+		uid = utils.NewUuidString()
 	}
 
 	idBytes, _ := bus.serializer.Serialize(uid)
@@ -56,9 +56,10 @@ func (bus EventBus) buildMessage(event Envelope) *kafka.Message {
 	cmdBytes, _ := bus.serializer.Serialize(event)
 	message.Value = cmdBytes
 
-	// TODO handle correlationId
-	// TODO handle time2live message
-	// TODO handle command delay time
+	message.TopicPartition = kafka.TopicPartition{
+		Partition: event.PartitionKey,
+		Topic:     event.Topic,
+	}
 
 	return message
 }

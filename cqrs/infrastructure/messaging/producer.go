@@ -15,7 +15,7 @@ type Producer struct {
 	client kafkaa.Client
 }
 
-// :Create
+//
 func New_Producer(c kafkaa.Client) Producer {
 	return Producer{
 		client: c,

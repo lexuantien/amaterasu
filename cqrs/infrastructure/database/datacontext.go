@@ -2,83 +2,97 @@ package database
 
 import (
 	"amaterasu/cqrs/infrastructure/messaging"
+	"amaterasu/cqrs/infrastructure/serialization"
 	"amaterasu/utils"
-	"context"
 	"math/rand"
 	"reflect"
 
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 type (
+
+	// interface contains func handle store/load aggreate in cqrs
 	IDataContext interface {
-		Find(id string)
-		Save(aggreate IAggregateRoot)
+		// find an aggreate in database
+		// id the aggreate id
+		// aggreate or nil if not found
+		Find(id string) (IAggregateRoot, error)
+
+		// save aggreate to database
+		// aggreate the aggreate
+		// nil or error if not found
+		Save(aggreate IAggregateRoot) error
 	}
 
+	// handle store/load aggreate in cqrs
 	DataContext struct {
-		bus         messaging.IEventBus
-		db          *gorm.DB
-		aggType     reflect.Type
-		aggTypeName string
+		// eventbus to publish message
+		// bus     messaging.IEventBus
+		orm           *gorm.DB
+		aggType       reflect.Type
+		topic         string
+		numPartittion int
+		serializer    serialization.ISerializer
 	}
 )
 
-func New_DataContext(agg interface{}, bus messaging.IEventBus) *DataContext {
+func New_DataContext(db *gorm.DB, agg interface{}, topic string, numPartittion int, serializer serialization.ISerializer) *DataContext {
 	// todo split to another class
-	db, err := gorm.Open(mysql.Open("root:root@tcp(127.0.0.1:3306)/test_db"))
-	if err != nil {
-		panic(err)
-	}
 
 	return &DataContext{
-		db:          db,
-		bus:         bus,
-		aggType:     reflect.TypeOf(agg),
-		aggTypeName: utils.GetTypeName2(reflect.TypeOf(agg)),
+		orm:           db,
+		topic:         topic,
+		numPartittion: numPartittion,
+		serializer:    serializer,
+		aggType:       reflect.TypeOf(agg),
 	}
 }
 
-func (context *DataContext) Find(id string) IAggregateRoot {
+func (context *DataContext) Find(id string) (IAggregateRoot, error) {
 
 	agg := reflect.New(context.aggType.Elem()).Interface().(IAggregateRoot)
 
-	tx := context.db.Model(agg).Where("id=?", id).First(agg)
+	tx := context.orm.Model(agg).Where("id=?", id).First(agg)
 	if tx.Error != nil {
-		panic(tx.Error)
+		return nil, tx.Error
 	}
 
-	return agg
+	return agg, nil
 }
 
-func (dbContext *DataContext) Save(aggreate IAggregateRoot) {
-	// aggreate.GetID()
+func (dbContext *DataContext) Save(aggreate IAggregateRoot) error {
 
-	// agg := reflect.New(dbContext.aggType).Interface().(IAggregateRoot)
-	// db := dbContext.db.Model(aggreate).Where(aggreate).First(&agg)
-	// fmt.Println(db.RowsAffected)
-
-	// if db.RowsAffected != 0 {
-	// 	return
-	// }
-
-	// Can't have transactions across storage and message bus.
-	err := dbContext.db.Save(aggreate).Error
+	// Can't have transactions across storage and UndispatchedMessage.
+	err := dbContext.orm.Save(aggreate).Error
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	// if contains some event need to publish
-	// todo store to `undispatch event` table then listener it to publish
+	// Can't have transactions across storage and UndispatchedMessage.
 	if val, ok := aggreate.(messaging.IEventPublisher); ok && val.GetEvents() != nil {
-		envelopes := make([]messaging.Envelope, len(val.GetEvents()))
+		undispatchedArr := make([]UndispatchedMessage, len(val.GetEvents()))
+
 		// all event need 1 partition
 		// random choose partition key
-		partititonKey := rand.Intn(5)
+		partititonKey := rand.Intn(dbContext.numPartittion)
 		for i, e := range val.GetEvents() {
-			envelopes[i] = messaging.EnvelopeWrap2(e, int32(partititonKey), messaging.EVENT)
+			bodyByte, _ := dbContext.serializer.Serialize(e)
+			undispatchedArr[i] = UndispatchedMessage{
+				Id:           aggreate.GetId(),
+				Stream:       utils.GetObjType2(dbContext.aggType.Elem()),
+				Body:         bodyByte,
+				PartitionKey: int32(partititonKey),
+				Topic:        dbContext.topic,
+				MsgAction:    EVENT,
+				MsgType:      utils.GetObjType2(reflect.TypeOf(e)),
+			}
 		}
-		dbContext.bus.Publishes(context.Background(), envelopes...)
+
+		if errInsert := dbContext.orm.CreateInBatches(undispatchedArr, len(undispatchedArr)).Error; errInsert != nil {
+			return errInsert
+		}
 	}
+
+	return nil
 }

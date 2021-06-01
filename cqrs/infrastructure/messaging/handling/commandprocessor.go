@@ -28,7 +28,7 @@ type CommandProcessor struct {
 	dispatcher *CommandDispatcher
 }
 
-//	Create new command processor
+// Create new command processor
 // Initializes a new instance of the CommandProcessor
 // @param r Kafka receive maeesage
 // @param s The serializer to use for the message body.
@@ -47,7 +47,7 @@ func (cp *CommandProcessor) Register(commandHandler messaging.ICommandHandler) e
 
 // Processes the message by calling the registered handler.
 func (cp *CommandProcessor) processMessage(msg messaging.Envelope) bool {
-	return cp.dispatcher.ProcessMessage(msg) == nil
+	return cp.dispatcher.ProcessMessage(msg, cp.serializer) == nil
 }
 
 // start consume message in message queue

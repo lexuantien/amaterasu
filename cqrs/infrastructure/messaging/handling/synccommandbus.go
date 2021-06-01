@@ -2,6 +2,7 @@ package handling
 
 import (
 	"amaterasu/cqrs/infrastructure/messaging"
+	"amaterasu/cqrs/infrastructure/serialization"
 	"context"
 )
 
@@ -19,11 +20,13 @@ mechanism.
 type SyncCommandBus struct {
 	bus        messaging.CommandBus
 	dispatcher *CommandDispatcher
+	serializer serialization.ISerializer
 }
 
-func New_SyncCommandBus(bus messaging.CommandBus) {
+func New_SyncCommandBus(bus messaging.CommandBus, serializer serialization.ISerializer) {
 	syncCb := &SyncCommandBus{}
 	syncCb.bus = bus
+	syncCb.serializer = serializer
 	syncCb.dispatcher = New_CommandDispatcher()
 }
 
@@ -33,8 +36,6 @@ func (scb SyncCommandBus) Register(commandHandler messaging.ICommandHandler) err
 
 func (scb SyncCommandBus) Send(ctx context.Context, command messaging.Envelope) error {
 	if !scb.doSend(command) {
-		// TODO trace log
-		// Trace.TraceInformation("Command with id {0} was not handled locally. Sending it through the bus.", command.Body.Id);
 		return scb.bus.Send(ctx, command)
 	}
 	return nil
@@ -52,7 +53,6 @@ func (scb SyncCommandBus) Sends(ctx context.Context, commands ...messaging.Envel
 
 	// Commands were not handled locally. Sending it and all remaining commands through the bus
 	if len(commands) > 0 {
-		// TODO trace log
 		scb.bus.Sends(ctx, commands...)
 	}
 
@@ -60,6 +60,5 @@ func (scb SyncCommandBus) Sends(ctx context.Context, commands ...messaging.Envel
 }
 
 func (scb SyncCommandBus) doSend(command messaging.Envelope) bool {
-	// TODO trace log
-	return scb.dispatcher.ProcessMessage(command) == nil
+	return scb.dispatcher.ProcessMessage(command, scb.serializer) == nil
 }

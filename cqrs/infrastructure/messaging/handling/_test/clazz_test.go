@@ -11,16 +11,18 @@ import (
 var (
 	wg          = sync.WaitGroup{}
 	kafkaConfig = kafkaa.KafkaConfig{
-		Scr: &kafkaa.Scram{
-			Username: "ni61pj1b",
-			Password: "mWl_TWtiOPUKF4hRXVXPfULsKSoMzT0l",
-			Al256:    true,
-		},
 		Brokers:   "glider-01.srvs.cloudkafka.com:9094,glider-02.srvs.cloudkafka.com:9094,glider-03.srvs.cloudkafka.com:9094",
 		Topic:     "ni61pj1b--topic-A",
 		ConfigMap: make(map[string]interface{}),
 	}
 )
+
+func init() {
+	kafkaConfig.ConfigMap["security.protocol"] = "SASL_SSL"
+	kafkaConfig.ConfigMap["sasl.username"] = "ni61pj1b"
+	kafkaConfig.ConfigMap["sasl.password"] = "mWl_TWtiOPUKF4hRXVXPfULsKSoMzT0l"
+	kafkaConfig.ConfigMap["sasl.mechanisms"] = "SCRAM-SHA-256"
+}
 
 //? commands
 type Foo1 struct {

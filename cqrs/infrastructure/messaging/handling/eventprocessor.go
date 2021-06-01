@@ -41,7 +41,7 @@ func (cp *EventProcessor) Register(eventHandler messaging.IEventHandler) error {
 
 // Processes the message by calling the registered handler.
 func (cp *EventProcessor) processMessage(event messaging.Envelope) bool {
-	return cp.dispatcher.DispatchMessage(event) == nil
+	return cp.dispatcher.DispatchMessage(event, cp.serializer) == nil
 }
 
 func (cp *EventProcessor) Start() {

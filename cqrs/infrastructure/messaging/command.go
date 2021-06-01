@@ -8,19 +8,19 @@ type (
 	}
 
 	ICommand interface {
-		GetID() string
-		SetID(string)
+		GetId() string
+		SetId(string)
 	}
 
 	Command struct {
-		ID string
+		Id string
 	}
 )
 
-func (c *Command) GetID() string {
-	return c.ID
+func (cmd *Command) GetId() string {
+	return cmd.Id
 }
 
-func (c *Command) SetID(id string) {
-	c.ID = id
+func (cmd *Command) SetId(id string) {
+	cmd.Id = id
 }

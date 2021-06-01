@@ -13,40 +13,40 @@ import (
 
 func Test_send_command_to_kafka_then_success(t *testing.T) {
 
-	commandClient := kafkaa.New_kafkaa(kafkaConfig)
+	commandClient, _ := kafkaa.New_ProducerConfig(kafkaConfig)
 	sender := messaging.New_Producer(*commandClient)
 	serializer := serialization.New_JsonSerializer()
 	bus := messaging.New_CommandBus(sender, serializer)
 
 	ok := bus.Send(context.Background(), messaging.EnvelopeWrap(Foo1{
-		ProductId:   utils.NewString(),
+		ProductId:   utils.NewUuidString(),
 		Quantity:    uint(10),
 		Description: "Bàn phải xuất xứ từ Nhật Bản",
 	}, messaging.COMMAND))
 	fmt.Println(ok)
 
 	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(Foo1{
-		ProductId:   utils.NewString(),
+		ProductId:   utils.NewUuidString(),
 		Quantity:    uint(12),
 		Description: "Bàn phải xuất xứ từ Lao`",
 	}, messaging.COMMAND))
 	fmt.Println(ok)
 
 	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(Foo2{
-		OrderId: utils.NewString(),
+		OrderId: utils.NewUuidString(),
 	}, messaging.COMMAND))
 	fmt.Println(ok)
 
 	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(Foo3{
 		Gender: true,
-		FId:    utils.NewString(),
+		FId:    utils.NewUuidString(),
 	}, messaging.COMMAND))
 	fmt.Println(ok)
 
 	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(Foo4{
 		T:   "Ronaldo",
 		N:   false,
-		FId: utils.NewString(),
+		FId: utils.NewUuidString(),
 	}, messaging.COMMAND))
 	fmt.Println(ok)
 
@@ -54,7 +54,7 @@ func Test_send_command_to_kafka_then_success(t *testing.T) {
 }
 
 func Test_process_message_more_handlers_then_success(t *testing.T) {
-	config, err := kafkaa.New_KafkaServer(kafkaConfig, "z105")
+	config, err := kafkaa.New_ConsumerConfig(kafkaConfig, "z105")
 
 	if err != nil {
 		panic(err)
@@ -78,7 +78,7 @@ func Test_process_message_more_handlers_then_success(t *testing.T) {
 }
 
 func Test_process_message_with_1_handler_then_success(t *testing.T) {
-	subscriptionClient, _ := kafkaa.New_KafkaServer(kafkaConfig, "z107")
+	subscriptionClient, _ := kafkaa.New_ConsumerConfig(kafkaConfig, "z107")
 
 	receiver := messaging.New_Consumer(subscriptionClient)
 
@@ -96,7 +96,7 @@ func Test_process_message_with_1_handler_then_success(t *testing.T) {
 }
 
 func Test_process_message_more_handlers_then_fail(t *testing.T) {
-	subscriptionClient, err := kafkaa.New_KafkaServer(kafkaConfig, "z105")
+	subscriptionClient, err := kafkaa.New_ConsumerConfig(kafkaConfig, "z105")
 
 	if err != nil {
 		panic(err)

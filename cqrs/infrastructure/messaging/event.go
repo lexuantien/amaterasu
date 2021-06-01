@@ -8,19 +8,19 @@ type (
 	}
 
 	IEvent interface {
-		SetSourceID(string)
-		GetSourceID() string
+		SetSourceId(string)
+		GetSourceId() string
 	}
 
 	Event struct {
-		SourceID string
+		SourceId string
 	}
 )
 
-func (e *Event) GetSourceID() string {
-	return e.SourceID
+func (e *Event) GetSourceId() string {
+	return e.SourceId
 }
 
-func (e *Event) SetSourceID(sourceID string) {
-	e.SourceID = sourceID
+func (e *Event) SetSourceId(SourceId string) {
+	e.SourceId = SourceId
 }

@@ -2,19 +2,19 @@ package database
 
 type (
 	IAggregateRoot interface {
-		GetID() string
-		SetID(string)
+		GetId() string
+		SetId(string)
 	}
 
 	AggregateRoot struct {
-		ID string `gorm:"column:id"`
+		Id string `gorm:"column:id"`
 	}
 )
 
-func (agg *AggregateRoot) GetID() string {
-	return agg.ID
+func (agg *AggregateRoot) GetId() string {
+	return agg.Id
 }
 
-func (agg *AggregateRoot) SetID(id string) {
-	agg.ID = id
+func (agg *AggregateRoot) SetId(id string) {
+	agg.Id = id
 }

@@ -2,12 +2,11 @@ package handling
 
 import (
 	"amaterasu/cqrs/infrastructure/messaging"
+	"amaterasu/cqrs/infrastructure/serialization"
 	"amaterasu/utils"
 	"errors"
 	"reflect"
 	"strings"
-
-	"github.com/mitchellh/mapstructure"
 )
 
 //
@@ -108,7 +107,7 @@ func (cd *CommandDispatcher) Register(commandHandler messaging.ICommandHandler) 
 		}
 
 		// command type as string
-		commandTypeName := utils.GetTypeName2(commandType)
+		commandTypeName := utils.GetObjType2(commandType)
 		// store
 		cd.commandHandlers[commandType] = commandHandler
 		cd.commandTypes[commandTypeName] = commandType
@@ -124,7 +123,7 @@ func (cd *CommandDispatcher) Register(commandHandler messaging.ICommandHandler) 
 }
 
 // Processes the message by calling the registered handler.
-func (cd *CommandDispatcher) ProcessMessage(msg messaging.Envelope) error {
+func (cd *CommandDispatcher) ProcessMessage(msg messaging.Envelope, serializer serialization.ISerializer) error {
 	handlerFunc, found := cd.commandHandlerFuncs[msg.MsgType]
 
 	if !found {
@@ -137,23 +136,11 @@ func (cd *CommandDispatcher) ProcessMessage(msg messaging.Envelope) error {
 		return errors.New("not found command type")
 	}
 
-	command := reflect.New(entry).Interface().(messaging.ICommand)
-	config := &mapstructure.DecoderConfig{
-		DecodeHook:       utils.MapTimeFromJSON,
-		TagName:          "json",
-		Result:           command,
-		WeaklyTypedInput: true,
+	command, err := serializer.Deserialize(msg.Body, entry)
+
+	if err != nil {
+		return err
 	}
 
-	decoder, errDecoder := mapstructure.NewDecoder(config)
-	if errDecoder != nil {
-		return errors.New("config mapstructure fail")
-	}
-
-	errDecode := decoder.Decode(msg.Body)
-	if errDecode != nil {
-		return errors.New("decode message fail")
-	}
-
-	return handlerFunc(command)
+	return handlerFunc(command.(messaging.ICommand))
 }

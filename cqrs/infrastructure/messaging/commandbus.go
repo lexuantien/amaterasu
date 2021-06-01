@@ -13,11 +13,18 @@ type ICommandBus interface {
 	Sends(...Envelope) (bool, error)
 }
 
+// sends commands to the write model through a command bus
 type CommandBus struct {
-	producer   IMessageProducer
+	// kafka producer
+	producer IMessageProducer
+	// serializer to serialize data
 	serializer serialization.ISerializer
 }
 
+// create new command bus
+// 	producer kafka producer
+// 	ser
+// 	*CommandBus
 func New_CommandBus(producer IMessageProducer, ser serialization.ISerializer) *CommandBus {
 	return &CommandBus{
 		producer:   producer,
@@ -25,12 +32,14 @@ func New_CommandBus(producer IMessageProducer, ser serialization.ISerializer) *C
 	}
 }
 
+// send message
 func (bus CommandBus) Send(ctx context.Context, command Envelope) error {
 	message := bus.buildMessage(command)
 
 	return bus.producer.Send(ctx, message) // Send to kafka
 }
 
+// send messages
 func (bus CommandBus) Sends(ctx context.Context, commands ...Envelope) error {
 	for _, command := range commands {
 		err := bus.Send(ctx, command)
@@ -48,7 +57,7 @@ func (bus CommandBus) buildMessage(command Envelope) *kafka.Message {
 
 	var uid string = command.Id
 	if command.Id == "" {
-		uid = utils.NewString()
+		uid = utils.NewUuidString()
 	}
 
 	idBytes, _ := bus.serializer.Serialize(uid)
@@ -57,9 +66,10 @@ func (bus CommandBus) buildMessage(command Envelope) *kafka.Message {
 	cmdBytes, _ := bus.serializer.Serialize(command)
 	message.Value = cmdBytes
 
-	// TODO handle correlationId
-	// TODO handle time2live message
-	// TODO handle command delay time
+	message.TopicPartition = kafka.TopicPartition{
+		Partition: command.PartitionKey,
+		Topic:     command.Topic,
+	}
 
 	return message
 }
