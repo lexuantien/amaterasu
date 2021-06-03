@@ -6,6 +6,7 @@ import (
 	"amaterasu/utils"
 	"math/rand"
 	"reflect"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -17,7 +18,7 @@ type (
 		// find an aggreate in database
 		// id the aggreate id
 		// aggreate or nil if not found
-		Find(id string) (IAggregateRoot, error)
+		Find(id string) IAggregateRoot
 
 		// save aggreate to database
 		// aggreate the aggreate
@@ -49,23 +50,29 @@ func New_DataContext(db *gorm.DB, agg interface{}, topic string, numPartittion i
 	}
 }
 
-func (context *DataContext) Find(id string) (IAggregateRoot, error) {
+func (context *DataContext) Find(id string) IAggregateRoot {
 
 	agg := reflect.New(context.aggType.Elem()).Interface().(IAggregateRoot)
 
 	tx := context.orm.Model(agg).Where("id=?", id).First(agg)
-	if tx.Error != nil {
-		return nil, tx.Error
+	if tx.Error != nil || tx.RowsAffected != 1 {
+		return nil
 	}
 
-	return agg, nil
+	return agg
 }
 
 func (dbContext *DataContext) Save(aggreate IAggregateRoot) error {
 
+	oldVersion := aggreate.GetVersion()
+	aggreate.SetVersion(time.Now().Unix())
+
+	// begin a transaction
+	tx := dbContext.orm.Begin()
+
 	// Can't have transactions across storage and UndispatchedMessage.
-	err := dbContext.orm.Save(aggreate).Error
-	if err != nil {
+	if err := tx.Save(aggreate).Where("version = ?", oldVersion).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 
@@ -77,22 +84,28 @@ func (dbContext *DataContext) Save(aggreate IAggregateRoot) error {
 		// random choose partition key
 		partititonKey := rand.Intn(dbContext.numPartittion)
 		for i, e := range val.GetEvents() {
-			bodyByte, _ := dbContext.serializer.Serialize(e)
+			bodyByte, err := dbContext.serializer.Serialize(e)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
 			undispatchedArr[i] = UndispatchedMessage{
-				Id:           aggreate.GetId(),
-				Stream:       utils.GetObjType2(dbContext.aggType.Elem()),
-				Body:         bodyByte,
-				PartitionKey: int32(partititonKey),
-				Topic:        dbContext.topic,
-				MsgAction:    EVENT,
-				MsgType:      utils.GetObjType2(reflect.TypeOf(e)),
+				SourceId:  aggreate.GetId(),
+				Stream:    utils.GetObjType2(dbContext.aggType.Elem()),
+				Payload:   bodyByte,
+				Partition: int32(partititonKey),
+				Topic:     dbContext.topic,
+				MsgAction: EVENT,
+				MsgType:   utils.GetObjType2(reflect.TypeOf(e)),
+				Status:    0,
 			}
 		}
 
 		if errInsert := dbContext.orm.CreateInBatches(undispatchedArr, len(undispatchedArr)).Error; errInsert != nil {
+			tx.Rollback()
 			return errInsert
 		}
 	}
 
-	return nil
+	return tx.Commit().Error
 }

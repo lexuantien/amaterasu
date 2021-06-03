@@ -1,15 +1,17 @@
 package eventsourcing
 
+import (
+	"time"
+)
+
 type EventData struct {
-	SourceId  string `gorm:"column:source_id"`
-	Stream    string `gorm:"column:stream"`
-	Topic     string `gorm:"column:topic"`
-	Partition int    `gorm:"column:partition"`
-	Version   int    `gorm:"column:version"`
+	SourceId  string `gorm:"column:source_id;primaryKey"`
+	Stream    string `gorm:"column:stream;primaryKey"`
+	Version   int    `gorm:"column:version;primaryKey"`
+	EventId   uint   `gorm:"column:event_id"`
 	Type      string `gorm:"column:type"`
-	Status    int    `gorm:"column:status;comment:'-1=FAILURE|0=NEW|1=RUNNING|2=SUCCESS'"`
 	Payload   []byte `gorm:"column:payload;type:JSON"`
-	Error     string `gorm:"column:error"`
+	CreatedAt time.Time
 }
 
 func (EventData) TableName() string {

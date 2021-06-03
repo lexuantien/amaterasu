@@ -1,9 +1,11 @@
 package eventsourcing
 
 import (
+	"amaterasu/cqrs/infrastructure/database"
 	"amaterasu/utils"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"reflect"
 
 	"gorm.io/gorm"
@@ -17,11 +19,6 @@ type (
 		// @return The hydrated entity, or nil if it does not exist.
 		Find(string) IEventSourced
 
-		// Retrieves the event sourced entity.
-		// @param The id of the entity
-		// @return The hydrated entity, or nil if not found
-		Get(string) IEventSourced
-
 		// Saves the event sourced entity.
 		// @param The entity
 		// @return the error if connect fail
@@ -34,7 +31,9 @@ type (
 		db         *gorm.DB     // using orm to easy connect
 		entityType reflect.Type // entity type
 		// Note: Could potentially use DataAnnotations to get a friendly/unique name in case of collisions between BCs, instead of the type's name.
-		stream string
+		stream       string
+		topic        string
+		numPartition int
 	}
 )
 
@@ -62,64 +61,89 @@ func (store *EventStore) mapping(agg IEventSourced) {
 func (store *EventStore) Save(entity IEventSourced) error {
 	// fmt.Println(orm.db.AutoMigrate(&EventData{}))
 	events := make([]EventData, len(entity.Events()))
+	undispatchMessages := make([]database.UndispatchedMessage, len(entity.Events()))
 
+	tx := store.db.Begin()
 	for i, e := range entity.Events() {
 
 		eTypeName := utils.GetObjType2(reflect.TypeOf(e))
-		ePayloadByte, _ := json.Marshal(e)
-
-		eventData := EventData{
-			SourceId:  e.GetSourceId(),
-			Version:   e.GetVersion(),
-			Type:      eTypeName,
-			Payload:   ePayloadByte,
-			Topic:     entity.GetTopic(),
-			Partition: entity.GetPartition(),
-			Stream:    store.stream,
+		ePayloadByte, err := json.Marshal(e)
+		if err != nil {
+			return err
 		}
+		// `event_store` table
+		eventData := EventData{
+			SourceId: e.GetSourceId(),
+			Stream:   store.stream,
+			Version:  e.GetVersion(),
+			Type:     eTypeName,
+			Payload:  ePayloadByte,
+		}
+
+		// `undispatched_message` table
+		undispatchedMessage := database.UndispatchedMessage{
+			SourceId:  e.GetSourceId(),
+			Stream:    store.stream,
+			Partition: int32(entity.GetPartition()),
+			Topic:     entity.GetTopic(),
+			Payload:   ePayloadByte,
+			MsgType:   eTypeName,
+			MsgAction: database.EVENT,
+			Status:    0,
+			Version:   entity.GetVersion(),
+		}
+
 		events[i] = eventData
+		undispatchMessages[i] = undispatchedMessage
 	}
 
-	if errInsert := store.db.CreateInBatches(events, len(events)).Error; errInsert != nil {
+	if err := tx.CreateInBatches(events, len(events)).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if errInsert := tx.CreateInBatches(events, len(events)).Error; errInsert != nil {
+		tx.Rollback()
 		return errInsert
 	}
 
-	return nil
+	return tx.Commit().Error
 }
 
 func (store *EventStore) Find(id string) IEventSourced {
-	eventDataArr := []EventData{}
-	store.db.
+	var eventDataArr []EventData
+	result := store.db.
 		Where(&EventData{SourceId: id, Stream: store.stream}).
 		Order("version").
 		Find(&eventDataArr)
 
-	if len(eventDataArr) == 0 {
+	if result.RowsAffected == 0 {
 		return nil
 	}
 
-	stream := eventDataArr[0].Stream
-	topic := eventDataArr[0].Topic
-	partition := eventDataArr[0].Partition
+	entity := reflect.New(store.entityType).Interface().(IEventSourced)
+	entity.CreateDefaultValue(id, store.topic, entity)
+	pastEvents := deserialize(entity, eventDataArr)
+	entity.LoadFromHistory(pastEvents)
 
-	if store.stream == stream {
-		entity := reflect.New(store.entityType).Interface().(IEventSourced)
-		entity.CreateDefaultValue(id, topic, partition, entity)
-		pastEvents := deserialize(entity, eventDataArr)
-		entity.LoadFrom(pastEvents)
+	// check undispatch messages to get parttiton
+	var msg database.UndispatchedMessage
+	result = store.db.
+		Where(&database.UndispatchedMessage{SourceId: id, Stream: store.stream, Version: entity.GetVersion()}).
+		Order("source_id").
+		First(&msg)
 
-		return entity
-	}
-
-	return nil
-}
-
-func (orm *EventStore) Get(id string) IEventSourced {
-	entity := orm.Find(id)
-
-	if entity == nil {
+	if result.Error != nil {
 		return nil
 	}
+
+	if result.RowsAffected == 1 {
+		entity.SetPartition(msg.Partition)
+	}
+
+	// empty -> random partition
+	entity.SetPartition(int32(rand.Intn(store.numPartition)))
+
 	return entity
 }
 

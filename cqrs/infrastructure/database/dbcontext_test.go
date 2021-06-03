@@ -74,9 +74,8 @@ func Test_find_aggreate_then_update_data(t *testing.T) {
 
 	testDbContext.orm.AutoMigrate(InfoAggregateRoot{}) // for testing purpose
 
-	aggv, _ := testDbContext.Find("type id here")
+	agg := testDbContext.Find("type id here").(*InfoAggregateRoot)
 
-	agg := aggv.(*InfoAggregateRoot)
 	agg.Name = "Tien"
 	agg.Sex = "male"
 	agg.Status = "single"

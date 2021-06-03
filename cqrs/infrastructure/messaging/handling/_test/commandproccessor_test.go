@@ -13,10 +13,11 @@ import (
 
 func Test_send_command_to_kafka_then_success(t *testing.T) {
 
-	commandClient, _ := kafkaa.New_ProducerConfig(kafkaConfig)
-	sender := messaging.New_Producer(*commandClient)
+	config, _ := kafkaa.New_ProducerConfig(kafkaConfig)
+
+	producer := messaging.New_Producer(*config)
 	serializer := serialization.New_JsonSerializer()
-	bus := messaging.New_CommandBus(sender, serializer)
+	bus := messaging.New_CommandBus(producer, serializer)
 
 	ok := bus.Send(context.Background(), messaging.EnvelopeWrap(Foo1{
 		ProductId:   utils.NewUuidString(),
@@ -60,13 +61,13 @@ func Test_process_message_more_handlers_then_success(t *testing.T) {
 		panic(err)
 	}
 
-	receiver := messaging.New_Consumer(config)
+	consumer := messaging.New_Consumer(config)
 	serializer := serialization.New_JsonSerializer()
 
 	handler1 := New_CommandHander1()
 	handler2 := New_CommandHander2()
 
-	processor := handling.New_CommandProcessor(receiver, serializer)
+	processor := handling.New_CommandProcessor(consumer, serializer)
 
 	processor.Register(handler1)
 	processor.Register(handler2)
@@ -78,15 +79,15 @@ func Test_process_message_more_handlers_then_success(t *testing.T) {
 }
 
 func Test_process_message_with_1_handler_then_success(t *testing.T) {
-	subscriptionClient, _ := kafkaa.New_ConsumerConfig(kafkaConfig, "z107")
+	config, _ := kafkaa.New_ConsumerConfig(kafkaConfig, "z107")
 
-	receiver := messaging.New_Consumer(subscriptionClient)
+	consumer := messaging.New_Consumer(config)
 
 	serializer := serialization.New_JsonSerializer()
 
 	orderFooCommandHandler := New_CommandHander1()
 
-	commandProcessor := handling.New_CommandProcessor(receiver, serializer)
+	commandProcessor := handling.New_CommandProcessor(consumer, serializer)
 	commandProcessor.Register(orderFooCommandHandler)
 
 	wg.Add(1)
@@ -96,20 +97,20 @@ func Test_process_message_with_1_handler_then_success(t *testing.T) {
 }
 
 func Test_process_message_more_handlers_then_fail(t *testing.T) {
-	subscriptionClient, err := kafkaa.New_ConsumerConfig(kafkaConfig, "z105")
+	config, err := kafkaa.New_ConsumerConfig(kafkaConfig, "z105")
 
 	if err != nil {
 		panic(err)
 	}
 
-	receiver := messaging.New_Consumer(subscriptionClient)
+	consumer := messaging.New_Consumer(config)
 
 	serializer := serialization.New_JsonSerializer()
 
 	commandHandler1 := New_CommandHander1()
 	commandHandler2 := New_CommandHander2()
 
-	commandProcessor := handling.New_CommandProcessor(receiver, serializer)
+	commandProcessor := handling.New_CommandProcessor(consumer, serializer)
 
 	commandProcessor.Register(commandHandler1)
 

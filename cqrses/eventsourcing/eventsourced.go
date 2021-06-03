@@ -17,13 +17,16 @@ type (
 	IEventSourced interface {
 		Events() []IVersionedEvent
 		GetTopic() string
-		GetPartition() int
+		SetTopic(string)
+		GetPartition() int32
+		SetPartition(int32)
 		GetType(string) reflect.Type
+		GetVersion() int
 		//
-		LoadFrom(pastEvents []IVersionedEvent)
+		LoadFromHistory(pastEvents []IVersionedEvent)
 		Update(e IVersionedEvent)
 		AutoMappingHandles(aggreate interface{}) error
-		CreateDefaultValue(string, string, int, IEventSourced)
+		CreateDefaultValue(string, string, IEventSourced)
 	}
 
 	EventSourced struct {
@@ -33,11 +36,11 @@ type (
 		version       int
 		id            string
 		topic         string
-		partition     int
+		partition     int32
 	}
 )
 
-func New_EventSourced(partition int, topic string) EventSourced {
+func New_EventSourced(partition int32, topic string) EventSourced {
 	return EventSourced{
 		handlers:   make(map[reflect.Type]func(IVersionedEvent) error),
 		eventTypes: make(map[string]reflect.Type),
@@ -108,7 +111,7 @@ func (es *EventSourced) Update(e IVersionedEvent) {
 	es.pendingEvents = append(es.pendingEvents, e)
 }
 
-func (es *EventSourced) LoadFrom(pastEvents []IVersionedEvent) {
+func (es *EventSourced) LoadFromHistory(pastEvents []IVersionedEvent) {
 	// foreach (var e in pastEvents) {
 	// 	this.handlers[e.GetType()].Invoke(e);
 	// 	this.version = e.Version;
@@ -130,19 +133,29 @@ func (es *EventSourced) GetTopic() string {
 	return es.topic
 }
 
-func (es *EventSourced) GetPartition() int {
+func (es *EventSourced) GetVersion() int {
+	return es.version
+}
+func (es *EventSourced) GetPartition() int32 {
 	return es.partition
+}
+
+func (es *EventSourced) SetTopic(topic string) {
+	es.topic = topic
+}
+
+func (es *EventSourced) SetPartition(partition int32) {
+	es.partition = partition
 }
 
 func (es *EventSourced) GetType(t string) reflect.Type {
 	return es.eventTypes[t]
 }
 
-func (es *EventSourced) CreateDefaultValue(id, topic string, partition int, agg IEventSourced) {
+func (es *EventSourced) CreateDefaultValue(id, topic string, agg IEventSourced) {
 	es.eventTypes = make(map[string]reflect.Type)
 	es.handlers = make(map[reflect.Type]func(IVersionedEvent) error)
-	es.topic = topic
-	es.partition = partition
 	es.id = id
+	es.topic = topic
 	es.AutoMappingHandles(agg)
 }
