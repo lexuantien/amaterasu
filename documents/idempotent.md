@@ -1,0 +1,2 @@
+# Idempotent
+An operation that when repeated gives the same result. This concept is used in mathematics as well; but becomes an important concept in messaging when we deal with things like guaranteed delivery or at-least-once delivery.

@@ -7,12 +7,15 @@ type (
 		Register(ICommandHandler) error
 	}
 
+	// command interface
 	ICommand interface {
 		GetId() string
 		SetId(string)
 	}
 
+	// command struct
 	Command struct {
+		// the id or source id maybe
 		Id string
 	}
 )
