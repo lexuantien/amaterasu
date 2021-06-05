@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"amaterasu/cqrs/infrastructure/serialization"
-	"amaterasu/utils"
 	"context"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
@@ -55,13 +54,7 @@ func (bus CommandBus) buildMessage(command Envelope) *kafka.Message {
 
 	message := &kafka.Message{}
 
-	cmdId := command.Body.(ICommand).GetId()
-	if cmdId == "" {
-		cmdId = utils.NewUuidString()
-		command.Body.(ICommand).SetId(cmdId)
-	}
-
-	idBytes, _ := bus.serializer.Serialize(cmdId)
+	idBytes, _ := bus.serializer.Serialize(command.Id)
 	message.Key = idBytes
 
 	cmdBytes, _ := bus.serializer.Serialize(command)

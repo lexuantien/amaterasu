@@ -16,5 +16,7 @@ type ISerializer interface {
 	// entry type of output, 01/01/2022 golang support generic, so we must use this
 	// interface{} output value
 	// error if fail, else nil
-	Deserialize(message interface{}, entry reflect.Type) (interface{}, error)
+	Deserialize(message []byte, entry reflect.Type) (interface{}, error)
+
+	Deserialize2(message []byte, output interface{})
 }

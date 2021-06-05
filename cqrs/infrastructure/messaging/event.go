@@ -13,7 +13,7 @@ type (
 	}
 
 	Event struct {
-		SourceId string
+		SourceId string `json:"SourceId"`
 	}
 )
 

@@ -75,5 +75,5 @@ func (cp *CommandProcessor) Stop() {
 
 // recieve message from message queue
 func (cp *CommandProcessor) onMessageReceived(ctx context.Context, message *kafka.Message) error {
-	return OnMessageReceivedHandler(ctx, message, cp.processMessage, cp.consumer.Complete)
+	return OnMessageReceivedHandler(ctx, message, cp.serializer, cp.processMessage, cp.consumer.Complete)
 }

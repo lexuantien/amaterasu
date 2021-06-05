@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"amaterasu/cqrs/infrastructure/serialization"
-	"amaterasu/utils"
 	"context"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
@@ -45,13 +44,7 @@ func (bus EventBus) Publishes(ctx context.Context, events ...Envelope) error {
 func (bus EventBus) buildMessage(event Envelope) *kafka.Message {
 	message := &kafka.Message{}
 
-	evtId := event.Body.(IEvent).GetSourceId()
-	if evtId == "" {
-		evtId = utils.NewUuidString()
-		event.Body.(IEvent).SetSourceId(evtId)
-	}
-
-	idBytes, _ := bus.serializer.Serialize(evtId)
+	idBytes, _ := bus.serializer.Serialize(event.Id)
 	message.Key = idBytes
 
 	cmdBytes, _ := bus.serializer.Serialize(event)

@@ -2,10 +2,7 @@ package serialization
 
 import (
 	"encoding/json"
-	"errors"
 	"reflect"
-
-	"github.com/mitchellh/mapstructure"
 )
 
 type JsonSerializer struct{}
@@ -28,31 +25,16 @@ func (js JsonSerializer) Serialize(obj interface{}) ([]byte, error) {
 // entry type of output, 01/01/2022 golang support generic, so we must use this
 // interface{} output value
 // error if fail, else nil
-func (js JsonSerializer) Deserialize(message interface{}, entry reflect.Type) (interface{}, error) {
+func (js JsonSerializer) Deserialize(message []byte, entry reflect.Type) (interface{}, error) {
 
 	// create default value
 	exportVal := reflect.New(entry).Interface()
 
-	// config map data
-	config := &mapstructure.DecoderConfig{
-		// DecodeHook: utils.MapTimeFromJSON,
-		// TagName:          "json",
-		Result:   exportVal,
-		Metadata: nil,
-		// WeaklyTypedInput: true,
-	}
-
-	decoder, errDecoder := mapstructure.NewDecoder(config)
-	if errDecoder != nil {
-		return nil, errors.New("config mapstructure fail")
-	}
-
-	errDecode := decoder.Decode(message)
-	if errDecode != nil {
-		return nil, errors.New("decode message fail")
-	}
-
-	// json.Unmarshal()
+	js.Deserialize2(message, &exportVal)
 
 	return exportVal, nil
+}
+
+func (js JsonSerializer) Deserialize2(message []byte, output interface{}) {
+	json.Unmarshal(message, &output)
 }

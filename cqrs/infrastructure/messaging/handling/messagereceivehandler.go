@@ -2,9 +2,8 @@ package handling
 
 import (
 	"amaterasu/cqrs/infrastructure/messaging"
-	"bytes"
+	"amaterasu/cqrs/infrastructure/serialization"
 	"context"
-	"encoding/json"
 	"errors"
 	"log"
 
@@ -16,18 +15,20 @@ type OnCompleteMessage func(context.Context, *kafka.Message) error
 
 const LOOP_DO_AGAIN = 3
 
-func OnMessageReceivedHandler(ctx context.Context, message *kafka.Message, onProcessMessage OnProcessMessage, onCompleteMessage OnCompleteMessage) error {
+func OnMessageReceivedHandler(ctx context.Context, message *kafka.Message, serializer serialization.ISerializer, onProcessMessage OnProcessMessage, onCompleteMessage OnCompleteMessage) error {
 
 	msg := messaging.Envelope{} // wrapper class contain transfer data
 
 	// decode envelop class inside message
-	decoder := json.NewDecoder(bytes.NewReader(message.Value))
-	decoder.UseNumber()
-	errUnmarshal := decoder.Decode(&msg) // parse
+	serializer.Deserialize2(message.Value, &msg)
 
-	if errUnmarshal != nil {
-		return errUnmarshal
-	}
+	// decoder := json.NewDecoder(bytes.NewReader(message.Value))
+	// decoder.UseNumber()
+	// errUnmarshal := decoder.Decode(&msg) // parse
+
+	// if errUnmarshal != nil {
+	// 	return errUnmarshal
+	// }
 
 	// have a lot of onProcessMessage func, ie: onProcessMessage for command,
 	// onProcessMessage for event, onProcessMessage for event sourcing

@@ -7,7 +7,9 @@ import (
 	"amaterasu/kafkaa"
 	"amaterasu/utils"
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -18,13 +20,14 @@ func Test_send_command_to_kafka_then_success(t *testing.T) {
 	producer := messaging.New_Producer(*config)
 	serializer := serialization.New_JsonSerializer()
 	bus := messaging.New_CommandBus(producer, serializer)
-
-	ok := bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo1{
-		// Command:     messaging.Command{Id: "123"},
+	f := Foo1{
+		Command:     messaging.Command{Id: "123"},
 		ProductId:   utils.NewUuidString(),
 		Quantity:    uint(10),
 		Description: "Bàn phải xuất xứ từ Nhật Bản",
-	}, messaging.COMMAND))
+	}
+
+	ok := bus.Send(context.Background(), messaging.EnvelopeWrap(&f, messaging.COMMAND))
 	fmt.Println(ok)
 
 	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo1{
@@ -34,23 +37,23 @@ func Test_send_command_to_kafka_then_success(t *testing.T) {
 	}, messaging.COMMAND))
 	fmt.Println(ok)
 
-	// ok = bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo2{
-	// 	OrderId: utils.NewUuidString(),
-	// }, messaging.COMMAND))
-	// fmt.Println(ok)
+	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo2{
+		OrderId: utils.NewUuidString(),
+	}, messaging.COMMAND))
+	fmt.Println(ok)
 
-	// ok = bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo3{
-	// 	Gender: true,
-	// 	FId:    utils.NewUuidString(),
-	// }, messaging.COMMAND))
-	// fmt.Println(ok)
+	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo3{
+		Gender: true,
+		FId:    utils.NewUuidString(),
+	}, messaging.COMMAND))
+	fmt.Println(ok)
 
-	// ok = bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo4{
-	// 	T:   "Ronaldo",
-	// 	N:   false,
-	// 	FId: utils.NewUuidString(),
-	// }, messaging.COMMAND))
-	// fmt.Println(ok)
+	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo4{
+		T:   "Ronaldo",
+		N:   false,
+		FId: utils.NewUuidString(),
+	}, messaging.COMMAND))
+	fmt.Println(ok)
 
 	fmt.Println("done")
 }
@@ -124,4 +127,41 @@ func Test_process_message_more_handlers_then_fail(t *testing.T) {
 	wg.Wait()
 
 	fmt.Println(1)
+}
+
+type (
+	// Command struct {
+	// 	Id string `json:"Id"`
+	// }
+	PlaceSeat struct {
+		messaging.Command
+		SeatId   []string
+		Quantity int
+	}
+)
+
+func Test_1(t *testing.T) {
+	cmd := PlaceSeat{
+		Command: messaging.Command{
+			Id: "uuid",
+		},
+		SeatId: []string{
+			"1", "2",
+		},
+		Quantity: 10,
+	}
+	cmdByte := Serialize(cmd)
+	/* Send to kafka ...*/
+
+	/* Consume command from kafka ... */
+	exportVal := reflect.New(reflect.TypeOf(PlaceSeat{})).Interface()
+	fmt.Println(exportVal)
+	_ = json.Unmarshal(cmdByte, exportVal)
+	fmt.Println(exportVal)
+}
+
+func Serialize(payload interface{}) []byte {
+	cmdByte, _ := json.Marshal(payload)
+	fmt.Println(string(cmdByte))
+	return cmdByte
 }
