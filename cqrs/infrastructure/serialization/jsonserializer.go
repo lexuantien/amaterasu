@@ -1,7 +1,6 @@
 package serialization
 
 import (
-	"amaterasu/utils"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -21,7 +20,7 @@ func New_JsonSerializer() JsonSerializer {
 // []byte easy put it to kafka
 // error	nil if success, else
 func (js JsonSerializer) Serialize(obj interface{}) ([]byte, error) {
-	return json.MarshalIndent(obj, "", "")
+	return json.Marshal(obj)
 }
 
 // Deserializes an object graph to specific type
@@ -36,10 +35,11 @@ func (js JsonSerializer) Deserialize(message interface{}, entry reflect.Type) (i
 
 	// config map data
 	config := &mapstructure.DecoderConfig{
-		DecodeHook:       utils.MapTimeFromJSON,
-		TagName:          "json",
-		Result:           exportVal,
-		WeaklyTypedInput: true,
+		// DecodeHook: utils.MapTimeFromJSON,
+		// TagName:          "json",
+		Result:   exportVal,
+		Metadata: nil,
+		// WeaklyTypedInput: true,
 	}
 
 	decoder, errDecoder := mapstructure.NewDecoder(config)
@@ -51,6 +51,8 @@ func (js JsonSerializer) Deserialize(message interface{}, entry reflect.Type) (i
 	if errDecode != nil {
 		return nil, errors.New("decode message fail")
 	}
+
+	// json.Unmarshal()
 
 	return exportVal, nil
 }

@@ -105,6 +105,7 @@ func (cd *EventDispatcher) DispatchMessage(msg messaging.Envelope, serializer se
 		return err
 	}
 
+	// todo can make asynchrous
 	for _, handlerFunc := range handlerFuncArr {
 		errHandlerFunc := handlerFunc(event.(messaging.IEvent))
 		if errHandlerFunc != nil {

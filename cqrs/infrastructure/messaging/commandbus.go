@@ -55,12 +55,13 @@ func (bus CommandBus) buildMessage(command Envelope) *kafka.Message {
 
 	message := &kafka.Message{}
 
-	var uid string = command.Id
-	if command.Id == "" {
-		uid = utils.NewUuidString()
+	cmdId := command.Body.(ICommand).GetId()
+	if cmdId == "" {
+		cmdId = utils.NewUuidString()
+		command.Body.(ICommand).SetId(cmdId)
 	}
 
-	idBytes, _ := bus.serializer.Serialize(uid)
+	idBytes, _ := bus.serializer.Serialize(cmdId)
 	message.Key = idBytes
 
 	cmdBytes, _ := bus.serializer.Serialize(command)

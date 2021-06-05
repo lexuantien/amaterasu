@@ -16,7 +16,7 @@ type (
 	// command struct
 	Command struct {
 		// the id or source id maybe
-		Id string
+		Id string `json:"Id"`
 	}
 )
 

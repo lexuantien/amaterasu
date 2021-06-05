@@ -17,6 +17,7 @@ type OnCompleteMessage func(context.Context, *kafka.Message) error
 const LOOP_DO_AGAIN = 3
 
 func OnMessageReceivedHandler(ctx context.Context, message *kafka.Message, onProcessMessage OnProcessMessage, onCompleteMessage OnCompleteMessage) error {
+
 	msg := messaging.Envelope{} // wrapper class contain transfer data
 
 	// decode envelop class inside message

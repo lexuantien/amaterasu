@@ -19,37 +19,38 @@ func Test_send_command_to_kafka_then_success(t *testing.T) {
 	serializer := serialization.New_JsonSerializer()
 	bus := messaging.New_CommandBus(producer, serializer)
 
-	ok := bus.Send(context.Background(), messaging.EnvelopeWrap(Foo1{
+	ok := bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo1{
+		// Command:     messaging.Command{Id: "123"},
 		ProductId:   utils.NewUuidString(),
 		Quantity:    uint(10),
 		Description: "Bàn phải xuất xứ từ Nhật Bản",
 	}, messaging.COMMAND))
 	fmt.Println(ok)
 
-	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(Foo1{
+	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo1{
 		ProductId:   utils.NewUuidString(),
 		Quantity:    uint(12),
 		Description: "Bàn phải xuất xứ từ Lao`",
 	}, messaging.COMMAND))
 	fmt.Println(ok)
 
-	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(Foo2{
-		OrderId: utils.NewUuidString(),
-	}, messaging.COMMAND))
-	fmt.Println(ok)
+	// ok = bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo2{
+	// 	OrderId: utils.NewUuidString(),
+	// }, messaging.COMMAND))
+	// fmt.Println(ok)
 
-	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(Foo3{
-		Gender: true,
-		FId:    utils.NewUuidString(),
-	}, messaging.COMMAND))
-	fmt.Println(ok)
+	// ok = bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo3{
+	// 	Gender: true,
+	// 	FId:    utils.NewUuidString(),
+	// }, messaging.COMMAND))
+	// fmt.Println(ok)
 
-	ok = bus.Send(context.Background(), messaging.EnvelopeWrap(Foo4{
-		T:   "Ronaldo",
-		N:   false,
-		FId: utils.NewUuidString(),
-	}, messaging.COMMAND))
-	fmt.Println(ok)
+	// ok = bus.Send(context.Background(), messaging.EnvelopeWrap(&Foo4{
+	// 	T:   "Ronaldo",
+	// 	N:   false,
+	// 	FId: utils.NewUuidString(),
+	// }, messaging.COMMAND))
+	// fmt.Println(ok)
 
 	fmt.Println("done")
 }

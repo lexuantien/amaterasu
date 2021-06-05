@@ -26,28 +26,28 @@ func init() {
 
 //? commands
 type Foo1 struct {
-	messaging.Command
-	ProductId   string
-	Quantity    uint
-	Description string
+	messaging.Command `mapstructure:",squash"`
+	ProductId         string
+	Quantity          uint
+	Description       string
 }
 
 type Foo2 struct {
-	messaging.Command
-	OrderId string
+	messaging.Command `mapstructure:",squash"`
+	OrderId           string
 }
 
 type Foo3 struct {
-	messaging.Command
-	FId    string
-	Gender bool
+	messaging.Command `mapstructure:",squash"`
+	FId               string
+	Gender            bool
 }
 
 type Foo4 struct {
-	messaging.Command
-	FId string
-	T   string
-	N   bool
+	messaging.Command `mapstructure:",squash"`
+	FId               string
+	T                 string
+	N                 bool
 }
 
 //! command handlers
@@ -84,23 +84,23 @@ func New_CommandHander2() *CommandHander2 {
 
 //? events
 type Event1 struct {
-	messaging.Event
-	Name string
-	Id   string
+	messaging.Event `mapstructure:",squash"`
+	Name            string
+	Id              string
 }
 
 type Event2 struct {
-	messaging.Event
-	Id   string
-	Name string
-	Div  int
+	messaging.Event `mapstructure:",squash"`
+	Id              string
+	Name            string
+	Div             int
 }
 
 type Event3 struct {
-	messaging.Event
-	Id   string
-	Name string
-	Old  int
+	messaging.Event `mapstructure:",squash"`
+	Id              string
+	Name            string
+	Old             int
 }
 
 //! command handlers

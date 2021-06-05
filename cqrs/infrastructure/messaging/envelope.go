@@ -18,7 +18,7 @@ const (
 type Envelope struct {
 
 	// Identify
-	Id string
+	// Id string
 
 	// Wrap the command/event
 	Body interface{}
@@ -34,7 +34,7 @@ type Envelope struct {
 
 func EnvelopeWrap(body interface{}, msgAction MessageAction) Envelope {
 	return Envelope{
-		Id:           utils.NewUuidString(),
+		//	Id:           utils.NewUuidString(),
 		Body:         body,
 		PartitionKey: -1,
 		Topic:        nil,
@@ -45,7 +45,7 @@ func EnvelopeWrap(body interface{}, msgAction MessageAction) Envelope {
 
 func EnvelopeWrap2(body interface{}, partitionKey int32, msgAction MessageAction) Envelope {
 	return Envelope{
-		Id:           utils.NewUuidString(),
+		//	Id:           utils.NewUuidString(),
 		Body:         body,
 		PartitionKey: partitionKey,
 		Topic:        nil,
@@ -56,7 +56,7 @@ func EnvelopeWrap2(body interface{}, partitionKey int32, msgAction MessageAction
 
 func EnvelopeWrap3(body interface{}, msgAction MessageAction, topic string) Envelope {
 	return Envelope{
-		Id:           utils.NewUuidString(),
+		//	Id:           utils.NewUuidString(),
 		Body:         body,
 		PartitionKey: -1,
 		Topic:        &topic,
@@ -67,7 +67,7 @@ func EnvelopeWrap3(body interface{}, msgAction MessageAction, topic string) Enve
 
 func EnvelopeWrap4(body interface{}, msgAction MessageAction, partitionKey int32, topic string) Envelope {
 	return Envelope{
-		Id:           utils.NewUuidString(),
+		//	Id:           utils.NewUuidString(),
 		Body:         body,
 		PartitionKey: partitionKey,
 		Topic:        &topic,

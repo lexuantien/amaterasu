@@ -45,12 +45,13 @@ func (bus EventBus) Publishes(ctx context.Context, events ...Envelope) error {
 func (bus EventBus) buildMessage(event Envelope) *kafka.Message {
 	message := &kafka.Message{}
 
-	var uid string = event.Id
-	if event.Id == "" {
-		uid = utils.NewUuidString()
+	evtId := event.Body.(IEvent).GetSourceId()
+	if evtId == "" {
+		evtId = utils.NewUuidString()
+		event.Body.(IEvent).SetSourceId(evtId)
 	}
 
-	idBytes, _ := bus.serializer.Serialize(uid)
+	idBytes, _ := bus.serializer.Serialize(evtId)
 	message.Key = idBytes
 
 	cmdBytes, _ := bus.serializer.Serialize(event)
