@@ -9,15 +9,15 @@ Amaterasu is considered not only the god of the sun, but also the god (center) o
 - [x] Create [command](#Commands) and [event](#Events)
 - [x] Command handler and Event handler handle command and event
 - [x] CommandBus and EventBus produce  command and event
-- [x] Using ORM to connect mysql database
-- [x] Save event in eventsourcing to `event_store` table
-- [x] Save messages to `undispatched_message` table before produce to kafka
-- [x] Sagas (Process manager) to handle messages from different bounded context
-- [x] Order message
-- [ ] Snapshot `event_store` using memeto pattern
-- [ ] Monitor message
-- [ ] Idempotent and duplicate message
-- [ ] Mysql bindlog to produce message
+- [x] ORM to connect mysql database
+- [x] Save eventsourcing to `event_store` 
+- [x] Save messages to `undispatched_message` before produce
+- [x] Sagas to handle messages from different bounded context
+- [ ] Guarantee message ordering, delivery, duplicate, Idempotent
+- [ ] Snapshot `event_store` 
+- [ ] Monitor 
+- [ ] Mysql bindlog
+- [ ] Docker for golang, c++, mysql
 
 # CQRS 
     CQRS is a simple pattern that strictly segregates the responsibility of handling command input into an autonomous system from the responsibility of handling side-effect-free query/read access on the same system. Consequently, the decoupling allows for any number of homogeneous or heterogeneous query/read modules to be paired with a command processor and this principle presents a very suitable foundation for event sourcing, eventual-consistency state replication/fan-out and, thus, high-scale read access. In simple terms: You don't service queries via the same module of a service that you process commands through. For REST heads: GET wires to a different thing from what PUT/POST/DELETE wire up to.
