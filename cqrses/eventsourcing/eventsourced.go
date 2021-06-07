@@ -22,11 +22,12 @@ type (
 		SetPartition(int32)
 		GetType(string) reflect.Type
 		GetVersion() int
+		GetId() string
 		//
 		LoadFromHistory(pastEvents []IVersionedEvent)
 		Update(e IVersionedEvent)
 		AutoMappingHandles(aggreate interface{}) error
-		CreateDefaultValue(string, string, IEventSourced)
+		CreateDefaultValue(string, string, int32, IEventSourced)
 	}
 
 	EventSourced struct {
@@ -40,13 +41,12 @@ type (
 	}
 )
 
-func New_EventSourced(partition int32, topic string) EventSourced {
+func New_EventSourced() EventSourced {
 	return EventSourced{
 		handlers:   make(map[reflect.Type]func(IVersionedEvent) error),
 		eventTypes: make(map[string]reflect.Type),
-		topic:      topic,
-		partition:  partition,
 		id:         utils.NewUuidString(),
+		partition:  -1,
 	}
 }
 
@@ -152,10 +152,15 @@ func (es *EventSourced) GetType(t string) reflect.Type {
 	return es.eventTypes[t]
 }
 
-func (es *EventSourced) CreateDefaultValue(id, topic string, agg IEventSourced) {
+func (es *EventSourced) CreateDefaultValue(id, topic string, partition int32, agg IEventSourced) {
 	es.eventTypes = make(map[string]reflect.Type)
 	es.handlers = make(map[reflect.Type]func(IVersionedEvent) error)
 	es.id = id
 	es.topic = topic
+	es.partition = partition
 	es.AutoMappingHandles(agg)
+}
+
+func (es *EventSourced) GetId() string {
+	return es.id
 }

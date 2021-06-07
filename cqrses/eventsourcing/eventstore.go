@@ -5,6 +5,7 @@ import (
 	"amaterasu/utils"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"reflect"
 
 	"gorm.io/gorm"
@@ -32,7 +33,7 @@ type (
 		// Note: Could potentially use DataAnnotations to get a friendly/unique name in case of collisions between BCs, instead of the type's name.
 		stream       string
 		topic        string
-		numPartition int
+		numPartition int32
 	}
 )
 
@@ -40,8 +41,12 @@ type (
 // @param db connection
 // @param A entity (aggreate) use this orm
 // @return the orm repository
-func New_EventStore(db *gorm.DB, agg IEventSourced) *EventStore {
-	store := &EventStore{db: db}
+func New_EventStore(db *gorm.DB, agg IEventSourced, numPartition int32, topic string) *EventStore {
+	store := &EventStore{
+		db:           db,
+		numPartition: numPartition,
+		topic:        topic,
+	}
 	store.mapping(agg)
 	return store
 }
@@ -62,6 +67,11 @@ func (store *EventStore) Save(entity IEventSourced) error {
 	events := make([]EventData, len(entity.Events()))
 	undispatchMessages := make([]database.UndispatchedMessage, len(entity.Events()))
 
+	var partition int32 = int32(rand.Intn(int(store.numPartition)))
+	if entity.GetPartition() != -1 {
+		partition = entity.GetPartition()
+	}
+
 	tx := store.db.Begin()
 	for i, e := range entity.Events() {
 
@@ -72,19 +82,21 @@ func (store *EventStore) Save(entity IEventSourced) error {
 		}
 		// `event_store` table
 		eventData := EventData{
-			SourceId: e.GetSourceId(),
-			Stream:   store.stream,
-			Version:  e.GetVersion(),
-			Type:     eTypeName,
-			Payload:  ePayloadByte,
+			SourceId:  e.GetSourceId(),
+			Stream:    store.stream,
+			Version:   e.GetVersion(),
+			Topic:     store.topic,
+			Partition: partition,
+			Type:      eTypeName,
+			Payload:   ePayloadByte,
 		}
 
 		// `undispatched_message` table
 		undispatchedMessage := database.UndispatchedMessage{
 			SourceId:  e.GetSourceId(),
 			Stream:    store.stream,
-			Partition: int32(entity.GetPartition()),
-			Topic:     entity.GetTopic(),
+			Partition: partition,
+			Topic:     store.topic,
 			Payload:   ePayloadByte,
 			MsgType:   eTypeName,
 			MsgAction: database.EVENT,
@@ -121,28 +133,10 @@ func (store *EventStore) Find(id string) IEventSourced {
 	}
 
 	entity := reflect.New(store.entityType).Interface().(IEventSourced)
-	entity.CreateDefaultValue(id, store.topic, entity)
-	entity.SetPartition(eventDataArr[0].Partition)
+	entity.CreateDefaultValue(id, store.topic, eventDataArr[0].Partition, entity)
+	// entity.SetPartition(eventDataArr[0].Partition)
 	pastEvents := deserialize(entity, eventDataArr)
 	entity.LoadFromHistory(pastEvents)
-
-	// check undispatch messages to get parttiton
-	// var msg database.UndispatchedMessage
-	// result = store.db.
-	// 	Where(&database.UndispatchedMessage{SourceId: id, Stream: store.stream, Version: entity.GetVersion()}).
-	// 	Order("source_id").
-	// 	First(&msg)
-
-	// if result.Error != nil {
-	// 	return nil
-	// }
-
-	// if result.RowsAffected == 1 {
-	// 	entity.SetPartition(msg.Partition)
-	// }
-
-	// empty -> random partition
-	// entity.SetPartition(int32(rand.Intn(store.numPartition)))
 
 	return entity
 }
