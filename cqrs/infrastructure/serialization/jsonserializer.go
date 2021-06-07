@@ -5,7 +5,8 @@ import (
 	"reflect"
 )
 
-type JsonSerializer struct{}
+type JsonSerializer struct {
+}
 
 // create new JsonSerialize
 func New_JsonSerializer() JsonSerializer {

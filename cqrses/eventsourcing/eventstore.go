@@ -5,7 +5,6 @@ import (
 	"amaterasu/utils"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"reflect"
 
 	"gorm.io/gorm"
@@ -123,26 +122,27 @@ func (store *EventStore) Find(id string) IEventSourced {
 
 	entity := reflect.New(store.entityType).Interface().(IEventSourced)
 	entity.CreateDefaultValue(id, store.topic, entity)
+	entity.SetPartition(eventDataArr[0].Partition)
 	pastEvents := deserialize(entity, eventDataArr)
 	entity.LoadFromHistory(pastEvents)
 
 	// check undispatch messages to get parttiton
-	var msg database.UndispatchedMessage
-	result = store.db.
-		Where(&database.UndispatchedMessage{SourceId: id, Stream: store.stream, Version: entity.GetVersion()}).
-		Order("source_id").
-		First(&msg)
+	// var msg database.UndispatchedMessage
+	// result = store.db.
+	// 	Where(&database.UndispatchedMessage{SourceId: id, Stream: store.stream, Version: entity.GetVersion()}).
+	// 	Order("source_id").
+	// 	First(&msg)
 
-	if result.Error != nil {
-		return nil
-	}
+	// if result.Error != nil {
+	// 	return nil
+	// }
 
-	if result.RowsAffected == 1 {
-		entity.SetPartition(msg.Partition)
-	}
+	// if result.RowsAffected == 1 {
+	// 	entity.SetPartition(msg.Partition)
+	// }
 
 	// empty -> random partition
-	entity.SetPartition(int32(rand.Intn(store.numPartition)))
+	// entity.SetPartition(int32(rand.Intn(store.numPartition)))
 
 	return entity
 }
